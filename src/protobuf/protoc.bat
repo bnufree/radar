@@ -1,0 +1,1 @@
+protoc.exe -I=. --cpp_out=./2.6.1/  ./ZCHXAISVessel.proto
