@@ -47,7 +47,7 @@ void zchxDataOutputServerMgr::initFromCfg(const zchxCommon::zchxPublishSettingsL
     for(int i=0; i<list.size(); i++)
     {
         zchxCommon::zchxPublishSetting setting = list[i];
-        qDebug()<<setting.id<<setting.port<<setting.topic;
+        qDebug()<<"start create output thread. data id:"<<setting.id<<"port:"<<setting.port<<" topic:"<<setting.topic;
         QString old_topic = mCaseTopicList.value(setting.id, "");
 
         bool create_new_thread = true;
@@ -84,7 +84,6 @@ void zchxDataOutputServerMgr::initFromCfg(const zchxCommon::zchxPublishSettingsL
     foreach (zchxDataOutputServerThread* thread, mPortThreadList) {
         if(thread)
         {
-            qDebug()<<thread->getPort()<<thread->topic();
             if(thread->topic().size() == 0)
             {
                 delete thread;
@@ -95,11 +94,10 @@ void zchxDataOutputServerMgr::initFromCfg(const zchxCommon::zchxPublishSettingsL
                 data.sts = thread->isOK();
                 data.topic = thread->topic().join(" ");
                 stslist.append(data);
+                qDebug()<<"thread port:"<<data.port<<"topic:"<<data.topic<<" status:"<<(data.sts ? "success" : " fail");
             }
         }
     }
-
-    qDebug()<<mCaseTopicList;
     emit signalSendPortStartStatus(stslist);
 }
 
@@ -109,7 +107,6 @@ void zchxDataOutputServerMgr::slotAppendData(int caseid, const QByteArray& data)
     if(thread)
     {
         QString topic = mCaseTopicList[caseid];
-//        qDebug()<<"case id:"<<caseid<<" topic:"<<topic;
         thread->slotRecvContents(data, topic);
         if(!thread->topic().contains(topic))
         {

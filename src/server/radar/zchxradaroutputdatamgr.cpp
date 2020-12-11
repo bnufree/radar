@@ -45,7 +45,6 @@ void zchxRadarOutputDataMgr::updateVideoImage(int channel, const zchxRadarVideoS
     foreach (zchxRadarVideoSingleImage img, mVideoImageMap) {
         res->add_images()->CopyFrom(img);
     }
-    qDebug()<<"res img size:"<<res->images_size();
     if(res->images_size() > 0)
     {
         emit PUBLISH_INS->signalSendPublishData(zchxCommon::THREAD_DATA_RADAR_VIDEO, zchxRadarUtils::protoBufMsg2ByteArray(res));

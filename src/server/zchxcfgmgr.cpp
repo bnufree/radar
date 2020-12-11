@@ -61,6 +61,12 @@ zchxCfgMgr::zchxCfgMgr(const QString& fileName, QObject *parent) :
         return;
     }
     mCfg = new zchxCommon::zchxRadarServerCfg(doc.object());
+    QString local_ip = zchxCommonUtils::getAllIpv4List().first();
+    if(mCfg->server.ip != local_ip)
+    {
+        mCfg->server.ip = local_ip;
+        save();
+    }
 }
 
 zchxCfgMgr::~zchxCfgMgr()

@@ -47,7 +47,6 @@ bool ZmqMonitorThread::GetPeerIPAndPort(int fd, QString& ip, int& port, QString&
 
     port = htons(serverAddr.sin_port);
     ip = QString(buf);
-    //qDebug()<<"ip"<<ip<<" port"<<port;
     QHostInfo info = QHostInfo::fromName(ip);
     name = info.hostName();
     return  true;
@@ -91,7 +90,7 @@ void *ZmqMonitorThread::SocketMonitor(void *ctx)
     zmq_event_t event;
     static char addr[1025] ;
     int rc;
-    qDebug("starting monitor...\n");
+    qDebug("starting monitor...");
     void *s = zmq_socket (ctx, ZMQ_PAIR);
     assert (s);
     rc = zmq_connect (s, mUrl.toStdString().c_str());

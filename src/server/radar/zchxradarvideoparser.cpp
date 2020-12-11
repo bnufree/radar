@@ -198,7 +198,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
     if(mRadarType == zchxCommon::RADAR_UNKNOWN) return;
     const char *buf = sRadarData.constData();
     int len = sRadarData.size();
-//    qDebug()<<"analysisLowranceRadarSlot len:"<<len;
+    QString video_id = QString("radar(channel):%1(%2)").arg(mParseParam.radar_id).arg(mParseParam.channel_id);
     BR24::Constants::radar_frame_pkt *packet = (BR24::Constants::radar_frame_pkt *)buf;//正常大小是17160
 
     //cout<<sizeof(BR24::Constants::radar_frame_pkt);//结构体大小是固定的64328 定的120个spoke(536*120)+frame_hdr(8)
@@ -342,24 +342,8 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
             double heading_rotation = (((heading_raw) + 2 * azimuth_cell) % azimuth_cell);
             double heading_degrees = ((heading_rotation) * (double)DEGREES_PER_ROTATION / azimuth_cell);
             heading = (fmod(heading_degrees + 2 * DEGREES_PER_ROTATION, DEGREES_PER_ROTATION));
-        } else {
-            //ZCHXLOG_DEBUG("radar_heading_valid=" << radar_heading_valid );
         }
         //角度值强制变成偶数
-        int origin_angle_raw = angle_raw;
-        if(0){
-            //雷达扫描线检测
-            static QMap<int, int> counterMap;
-            if(counterMap.contains(spoke) && counterMap[spoke] != origin_angle_raw)
-            {
-                qDebug()<<"error spoke angle find now:"<<spoke<<origin_angle_raw<<counterMap[spoke];
-            } else
-            {
-                counterMap[spoke] = origin_angle_raw;
-            }
-
-        }
-
 //        qDebug()<<"spoke:"<<spoke<<" angle:"<<angle_raw;
         if(angle_raw % 2)
         {
@@ -399,7 +383,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         //检查是否是经过了一次扫描周期,如果是,发出数据开始解析
         if(mStartAzimuth >= 0 && mStartAzimuth == angle_raw)
         {
-            qDebug()<<"cycle lowrance data end:"<<QDateTime::currentDateTime().toString("hh:mm:ss zzz")<<" elaped:"<<mCounterT.elapsed()<<" spoke count:"<<mTermSpokeCount<<QThread::currentThread();
+            qDebug()<<video_id<<"video data term end:"<<" and time elapsed:"<<mCounterT.elapsed()<<" spokes count:"<<mTermSpokeCount;
             processVideoData(true);
             mRadarVideoMap1T.clear();
             mStartAzimuth = -1;
@@ -424,11 +408,11 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         objVideoData.m_time = QDateTime::currentMSecsSinceEpoch();
         //半径
         mScanRadius = range_meters;
-        mRadarVideoMap1T[objVideoData.m_uMsgIndex % 2048] = objVideoData;
+        mRadarVideoMap1T[angle_raw] = objVideoData;
         mTermSpokeCount++;
         if(mStartAzimuth == -1)
         {
-            qDebug()<<"new cycle lowrance data now:"<<QDateTime::currentDateTime().toString("hh:mm:ss zzz");
+            qDebug()<<video_id<<"start new term video data at angle:"<<objVideoData.m_uAzimuth;
             mCounterT.start();
             mStartAzimuth = angle_raw;
         }
@@ -540,6 +524,11 @@ void zchxRadarVideoParser::slotSetRadarType(int type)
 bool zchxRadarVideoParser::isSameParseSetting(const zchxVideoParserSettings &setting)
 {
     return mParseParam == setting;
+}
+
+void zchxRadarVideoParser::slotSetRadarHead(double head)
+{
+    mParseParam.head = head;
 }
 
 void zchxRadarVideoParser::updateParseSetting(const zchxVideoParserSettings &setting)

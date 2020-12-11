@@ -11,10 +11,10 @@
 #endif
 
 #define WINRAR_FILE_SIZE 20
-#define VIDEO_FILE_DIR  "VideData"
-#define REPORT_FILE_DIR "ReportData"
-#define HEART_FILE_DIR   "HeartData"
-#define OUTPUT_DATA_DIR "OutputData"
+#define VIDEO_FILE_DIR      "VideData"
+#define REPORT_FILE_DIR     "ReportData"
+#define HEART_FILE_DIR      "HeartData"
+#define OUTPUT_DATA_DIR     "OutputData"
 #define FILE_MAX_SIZE       30720
 typedef uint8_t UINT8;
 
@@ -170,13 +170,14 @@ ZCHXRadarDataServer::ZCHXRadarDataServer(zchxRadarOutputDataMgr* mgr, const zchx
 
     //创建默认的雷达数据输出目录
     QDir dir(QCoreApplication::applicationDirPath());
-    if(!dir.exists(OUTPUT_DATA_DIR))
+    mDataSaveDir = QString("%1/%2/%3").arg(OUTPUT_DATA_DIR).arg(parse.radar_id).arg(parse.channel_id);
+    if(!dir.exists(mDataSaveDir))
     {
-        bool sts = dir.mkdir(OUTPUT_DATA_DIR);
-        qDebug()<<"create output dir:"<<OUTPUT_DATA_DIR<<sts;
+        bool sts = dir.mkpath(mDataSaveDir);
+        qDebug()<<"create output dir:"<<mDataSaveDir<<sts;
     } else
     {
-        qDebug()<<"output dir already exist:"<<OUTPUT_DATA_DIR;
+        qDebug()<<"output dir already exist:"<<mDataSaveDir;
     }
 
 //    if(!parent)
@@ -281,8 +282,6 @@ void ZCHXRadarDataServer::initDataSocket()
     mVideoSocket = new zchxMulticastDataScoket(ip_str, mChSet.video.ip, mChSet.video.port, nif);
     connect(mVideoSocket, SIGNAL(signalSendRecvData(QByteArray)), this, SLOT(slotRecvVideoData(QByteArray)));
     mReportSocket = new zchxMulticastDataScoket(ip_str, mChSet.report.ip, mChSet.report.port, nif);
-    mReportSocket->setDebug(true);
-    mVideoSocket->setDebug(true);
     connect(mReportSocket, &zchxMulticastDataScoket::signalNoDataRecv, this, [=](){
 #ifdef UDP_THREAD
         mVideoSocket->setIsOver(true);
@@ -387,8 +386,7 @@ void ZCHXRadarDataServer::slotRecvHeartData(const QByteArray &bytes)
 
 void ZCHXRadarDataServer::outputData2File(int type, const QByteArray &data)
 {
-    QDir dir(QCoreApplication::applicationDirPath());
-    dir.cd(OUTPUT_DATA_DIR);  //进入某文件夹
+    QDir dir(mDataSaveDir);
     QString *wkFileName = 0;
     QStringList *wkFileList;
     if(type == Data_Video)
@@ -777,6 +775,7 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         int ba = (int)data->bearing_alignment / 10;
         if (ba > 180) ba = ba - 360;
         updateReportValue(zchxCommon::BEARING_ALIGNMENT, ba);
+        if(mVideoParse) mVideoParse->slotSetRadarHead(ba * 1.0);
         // antenna height
         updateReportValue(zchxCommon::ANTENNA_HEIGHT, data->antenna_height / 1000);
         break;

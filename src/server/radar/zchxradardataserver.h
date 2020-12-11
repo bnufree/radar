@@ -139,6 +139,7 @@ private:
     QStringList                     mLocalIPList;
     int                             mCurrentIPIndex;
     QString                         mLastRecvIP;
+    QString                         mDataSaveDir;
 };
 
 #endif // ZCHXRADARDATASERVER_H

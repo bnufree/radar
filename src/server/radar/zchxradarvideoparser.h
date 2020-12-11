@@ -59,6 +59,7 @@ public slots:
     //手动指定雷达类型
     void slotSetRadarType(int type);
     void slotRecvVideoData(const QByteArray& bytes);
+    void slotSetRadarHead(double head);
 private:
     void processVideoData(bool rotate = true);
     void InitializeLookupData();

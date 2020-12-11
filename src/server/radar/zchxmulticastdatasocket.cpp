@@ -49,14 +49,16 @@ void zchxMulticastDataScoket::init()
     mInit = false;
     mErrCunt = 0;
     if(mHost.length() == 0 || mPort == 0) return;
-    //选择网卡
-    if(!bind(QHostAddress(mLocalIP), mPort,QAbstractSocket::ShareAddress))
+    QString bind_ip = mLocalIP;
+#ifndef Q_OS_WIN
+    bind_ip = mHost;
+#endif
+    if(!bind(QHostAddress(bind_ip), mPort,QAbstractSocket::ShareAddress))
     {
-        qDebug()<<"bind port failed:"<<mPort<<" with local card:"<<mLocalIP;
+        qDebug()<<"bind port failed:"<<mPort<<" with local card:"<<bind_ip;
         emit signalNoDataRecv();
         return;
     }
-
     setSocketOption(QAbstractSocket::MulticastLoopbackOption, 0);//禁止本机接收
     setMulticastInterface(mNIF);
     if(!joinMulticastGroup(QHostAddress(mHost), mNIF))
@@ -66,11 +68,6 @@ void zchxMulticastDataScoket::init()
         return;
     }
     qDebug()<<"init multicast succeed."<<mHost<<":"<<mPort<<" with local card:"<<mLocalIP;
-//    if(waitForReadyRead(3000))
-//    {
-//        qDebug()<<"after 3000ms no data recv from"<<mHost<<":"<<mPort<<" with local card:"<<mLocalIP;
-//        emit signalNoDataRecv();
-//    }
     mInit = true;
     return;
 }

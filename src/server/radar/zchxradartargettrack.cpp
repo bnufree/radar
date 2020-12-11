@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <QGeoCoordinate>
 
-const bool track_debug = true;
+const bool track_debug = false;
 
 const double point_near_line = 200;
 const double ship_max_speed = 5.0;            //5m/s ~~ 10节  10m/s 就是20节
@@ -55,9 +55,7 @@ zchxRadarTargetTrack::zchxRadarTargetTrack(const zchxVideoParserSettings& settin
 
 zchxRadarTargetTrack::~zchxRadarTargetTrack()
 {
-    qDebug()<<"start delete track obj";
     mTargetNodeMap.clear();
-    qDebug()<<"end delete track obj";
 }
 
 void zchxRadarTargetTrack::appendTask(const zchxRadarRectDefList &task)
@@ -74,7 +72,7 @@ bool zchxRadarTargetTrack::getTask(zchxRadarTrackTask &task)
     if(mTaskList.size() > 0)
     {
         qDebug()<<"delete unprocessed task size:"<<mTaskList.size();
-         mTaskList.clear();
+        mTaskList.clear();
     }
 
 }
@@ -223,7 +221,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
 //    zchxTimeElapsedCounter counter(__FUNCTION__);
     zchxRadarRectDefList temp_list(task);             //保存的未经处理的所有矩形单元
     quint32 now_time = task.first().updatetime();
-    qDebug()<<"now process list time:"<<QDateTime::fromTime_t(task.first().updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
+   if(track_debug) qDebug()<<"now process list time:"<<QDateTime::fromTime_t(task.first().updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
 
 
     QTime t;
@@ -235,7 +233,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     QList<int>  used_index_list;
 
     elapsed = t.elapsed();
-    qDebug()<<metaObject()->className()<<__FUNCTION__<<" calculate prediction area elaped:"<<elapsed;
+    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" calculate prediction area elaped:"<<elapsed;
     t.start();
 
     if(areaTableList.size() > 0)
@@ -264,7 +262,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                 foreach (zchxRadarRectDef def, table.mRectList) {
                     rectNumList.append(QString::number(def.rectnumber()));
                 }
-                qDebug()<<"prediction["<<i+1<<"] has node list:"<<node_number_list.join(" ")<<" rect num:"<<rectNumList.join(" ");
+                if(track_debug) qDebug()<<"prediction["<<i+1<<"] has node list:"<<node_number_list.join(" ")<<" rect num:"<<rectNumList.join(" ");
             }
         }
         //开始统计整理，每一个节点现在有多少个待选节点
@@ -301,7 +299,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                         rectNumList.append(QString::number(def.rectnumber()));
                 }
 
-                qDebug()<<"node: "<<node->mSerialNum<<" has releated rect:"<<rectNumList.join(",");
+                if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" has releated rect:"<<rectNumList.join(",");
             }
         }
         //开始将新的目标更新到旧目标对应的路径
@@ -327,12 +325,12 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                 determination.selectedRealNode = true;
                 if(DEBUG_TRACK_INFO)
                 {
-                    qDebug()<<"node: "<<node->mSerialNum<<" is about to find the corresponding rect. rect size:"<<targetList.size();
+                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is about to find the corresponding rect. rect size:"<<targetList.size();
                 }
 
                 if(node->mParent)
                 {
-                    qDebug()<<"node: "<<node->mSerialNum<<" is a child. find the closest rect"<<" path size:"<<path_size;
+                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is a child. find the closest rect"<<" path size:"<<path_size;
                     //如果节点是目标路径上的子节点，那么候选目标就只有一个，选择距离预推运动点最近的目标
                     int    index = -1;
                     double delta_time = now_time - node->mDefRect->updatetime();
@@ -361,7 +359,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                 {
                     //如果节点是第一个节点，那么目标的候选节点可以多个，暂且将所有点都添加到目标的候选中。
                     //这里就不进行任何其他操作
-                    qDebug()<<"node: "<<node->mSerialNum<<" is a top node. all coresspond rect appended"<<" path size:"<<path_size<<" to be added targe size:"<<targetList.size();
+                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is a top node. all coresspond rect appended"<<" path size:"<<path_size<<" to be added targe size:"<<targetList.size();
                 }
                 determination.targetList.append(targetList);
 
@@ -373,7 +371,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                             rectNumList.append(QString::number(def.rectnumber()));
                     }
 
-                    qDebug()<<"node: "<<node->mSerialNum<<" has select rect:"<<rectNumList;
+                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" has select rect:"<<rectNumList;
                 }
             } else
             {
@@ -434,7 +432,9 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                     if(1)
                     {
                         node->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, node)));
-                        if(node->isTopNode()) qDebug()<<"top node. node number: "<<node->mSerialNum<<" chiildren size:"<<node->mChildren.size()<<" directly"<<target.rectnumber();
+                        if(node->isTopNode()){
+                            if(DEBUG_TRACK_INFO) qDebug()<<"top node. node number: "<<node->mSerialNum<<" chiildren size:"<<node->mChildren.size()<<" directly"<<target.rectnumber();
+                        }
                         if(DEBUG_TRACK_INFO) qDebug()<<"add child node into path. node number: "<<node->mSerialNum<<" rect number:"<<target.rectnumber();
                     }
                  }
@@ -537,7 +537,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
                             if(1)
                             {
                                 startNode->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, startNode)));
-                                if(startNode->isTopNode()) qDebug()<<"top node. node number: "<<startNode->mSerialNum<<" chiildren size:"<<startNode->mChildren.size()<<" indirectly"<<target.rectnumber();
+                                if(startNode->isTopNode() && DEBUG_TRACK_INFO) qDebug()<<"top node. node number: "<<startNode->mSerialNum<<" chiildren size:"<<startNode->mChildren.size()<<" indirectly"<<target.rectnumber();
                                 if(DEBUG_TRACK_INFO) qDebug()<<"add child node into path. node number: "<<startNode->mSerialNum<<" including rect number:"<<target.rectnumber();
                             }
                         }
@@ -548,7 +548,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
         }
     }
     elapsed = t.elapsed();
-    qDebug()<<metaObject()->className()<<__FUNCTION__<<" update exist obj elaped:"<<elapsed;
+    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" update exist obj elaped:"<<elapsed;
     t.start();
 
     //将未更新的矩形作为新目标添加
@@ -663,7 +663,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     }
 
     elapsed = t.elapsed();
-    qDebug()<<metaObject()->className()<<__FUNCTION__<<" update obj status elaped:"<<elapsed;
+    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" update obj status elaped:"<<elapsed;
     t.start();
 
     //这里对目标进行总的遍历处理
@@ -729,7 +729,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     }
 
     elapsed = t.elapsed();
-    qDebug()<<metaObject()->className()<<__FUNCTION__<<" check same status and merge elaped:"<<elapsed;
+    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" check same status and merge elaped:"<<elapsed;
     t.start();
 
     //检查是否要对当次没有更新的目标进行预推更新
@@ -767,7 +767,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     }
 
     elapsed = t.elapsed();
-    qDebug()<<"exe obj prediction elaped:"<<elapsed <<mSettings.prediction_enabled<<mSettings.check_target_gap;
+    if(track_debug) qDebug()<<"exe obj prediction elaped:"<<elapsed <<mSettings.prediction_enabled<<mSettings.check_target_gap;
     t.start();
 
     //删除很久没有更新的目标点
@@ -776,7 +776,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     outputTargets();
 
     elapsed = t.elapsed();
-    qDebug()<<" out put elaped:"<<elapsed;
+    if(track_debug) qDebug()<<" out put elaped:"<<elapsed;
     t.start();
 }
 
@@ -902,7 +902,7 @@ QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_s
         if(length == 0)
         {
             //节点没有更新预推区域，这是异常情况
-            qDebug()<<"node:"<<top_node->mSerialNum<<" has no prediction area. abnormal occoured...";
+            if(DEBUG_TRACK_INFO) qDebug()<<"node:"<<top_node->mSerialNum<<" has no prediction area. abnormal occoured...";
         }
     }
     //开始计算目标预推区域和节点的对应关系
@@ -1015,13 +1015,13 @@ QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_s
 
 void zchxRadarTargetTrack::splitAllRoutesIntoTargets(TargetNode *node, TargetNode *routeNode)
 {
-    zchxTimeElapsedCounter counter(__FUNCTION__);
+    if(DEBUG_TRACK_INFO) zchxTimeElapsedCounter counter(__FUNCTION__);
     if(!node || !routeNode) return;
     //目标确认,将路径进行分离,确认的路径保留,未确认的路径移除并作为单独的目标再次加入,等待下一个周期到来时进行继续更新
     for(int i=0; i<node->mChildren.size();)
     {
         //取得路径的第一个节点
-        qDebug()<<"i = "<<i<<node->mChildren.size();
+        if(DEBUG_TRACK_INFO)    qDebug()<<"i = "<<i<<node->mChildren.size();
         TargetNode *child_lvl1 = node->mChildren[i].data();
         if(!child_lvl1) continue;
         if(child_lvl1 == routeNode)

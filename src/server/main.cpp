@@ -5,10 +5,8 @@
 #include <QTextCodec>
 #include <iostream>
 #include "mainprocess.h"
+#include <QProcess>
 
-//const QString appPath = QCoreApplication::applicationDirPath();
-//const QString appName = QCoreApplication::applicationName();
-//const QString logPath = QCoreApplication::applicationDirPath() + QString("/log");
 void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     static QString log_file_name = "";
@@ -16,6 +14,7 @@ void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, cons
     static QMutex mutex;
     static qint64 log_file_lenth = 0;
     mutex.lock();
+
     QString text;
     switch (type) {
     case QtDebugMsg:
@@ -72,8 +71,7 @@ void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, cons
         std::cout <<"open file failed...........";
     }
     mutex.unlock();
-    message = QString("[%1] %2 [%3] [%4] ").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss zzz"))
-            .arg(text).arg(context.file).arg(context.line);
+    message = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss  ");
     std::cout << message.toStdString();
     std::cout << msg.toUtf8().toStdString() <<std::endl;
 }
@@ -82,6 +80,10 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+    QProcess p(0);
+    p.start("cmd", QStringList()<<"/c"<<"chcp 65001");
+    p.waitForStarted();
+    p.waitForFinished();
     qInstallMessageHandler(logMessageOutputQt5);
     MainProc->start();
     return a.exec();

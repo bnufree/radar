@@ -12,51 +12,59 @@ zchxFilterAreaFile::zchxFilterAreaFile(const QString& fileName)
 void zchxFilterAreaFile::init()
 {
     QFile file(mFileName);
+    qDebug()<<"start init filter area from file:"<<mFileName;
     if(file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         QJsonParseError err;
-        QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &err);
-        if(err.error == QJsonParseError::NoError)
+        QByteArray bytes = file.readAll();
+        if(bytes.size() > 0)
         {
-            //支持一个或者多个区域
-            QJsonArray array;
-            if(doc.isObject())
+            QJsonDocument doc = QJsonDocument::fromJson(bytes, &err);
+            if(err.error == QJsonParseError::NoError)
             {
-                array.append(doc.object());
-            } else if(doc.isArray())
-            {
-                array = doc.array();
-            }
-            if(array.size() == 0)
-            {
-                qDebug()<<"no filter area found in file."<<mFileName;
-            } else
-            {
-                for(int i=0; i<array.size(); i++)
+                //支持一个或者多个区域
+                QJsonArray array;
+                if(doc.isObject())
                 {
-                    zchxCommon::zchxFilterArea area(array[i].toObject());
-                    qDebug()<<"filter:"<<area.id<<area.type<<area.name;
-                    if(area.id >= 0)
+                    array.append(doc.object());
+                } else if(doc.isArray())
+                {
+                    array = doc.array();
+                }
+                if(array.size() == 0)
+                {
+                    qDebug()<<"filter area not found, pls check file...";
+                } else
+                {
+                    for(int i=0; i<array.size(); i++)
                     {
-                        if(mAreaMap.contains(area.id))
+                        zchxCommon::zchxFilterArea area(array[i].toObject());
+                        qDebug()<<"filter area:"<<area.id<<area.type<<area.name;
+                        if(area.id >= 0)
                         {
-                            qDebug()<<"find multi area id "<<area.id<<mFileName;
-                            continue;
+                            if(mAreaMap.contains(area.id))
+                            {
+                                qDebug()<<"multi filter area id:"<<area.id<<mFileName;
+                                continue;
+                            }
+                            mAreaMap[area.id] = area;
+                        } else
+                        {
+                            qDebug()<<"abnormal filter area id"<<area.id<<mFileName;
                         }
-                        mAreaMap[area.id] = area;
-                    } else
-                    {
-                        qDebug()<<"find abnormal area id negiative now"<<area.id<<mFileName;
+
                     }
 
+                    qDebug()<<"total filter area size:"<<mAreaMap.size();
+
                 }
-
-                qDebug()<<"filter area found in file."<<mFileName<< "with size:"<<mAreaMap.size();
-
+            } else
+            {
+                qDebug()<<"parse filter area json file abnormal end."<<" error code:"<<err.error<<err.errorString();
             }
         } else
         {
-            qDebug()<<"parse json file error occured."<<err.error<<err.errorString()<<mFileName;
+            qDebug()<<"filter area file is empty. filter area not set yet.";
         }
 
         //开始进行编号
@@ -64,12 +72,13 @@ void zchxFilterAreaFile::init()
 
     } else
     {
-        qDebug()<<"open file failed.."<<mFileName;
+        qDebug()<<"open filter area file failed.";
     }
 }
 
 bool zchxFilterAreaFile::updateFile()
 {
+    bool sts = false;
     QFile file(mFileName);
     if(file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -82,35 +91,41 @@ bool zchxFilterAreaFile::updateFile()
         file.write(doc.toJson());
         file.close();
 
-        return true;
+        sts = true;
     }
+    QString result = (sts == true ? "成功" : "失败");
 
-    return false;
+    qDebug()<<QString("更新屏蔽区域到文件:%1 %2").arg(mFileName).arg(result);
+
+    return sts;
 }
 
 bool zchxFilterAreaFile::removeArea(const QList<int> ids)
 {
+    qDebug()<<QString("开始删除屏蔽区域：")<<ids;
     foreach (int id, ids) {
         if(!mAreaMap.contains(id)) continue;
         mAreaMap.remove(id);
     }
     if(updateFile())
     {
-        qDebug()<<"remove area ok"<<ids<<mFileName;
+        qDebug()<<QString("删除屏蔽区域成功");
         return true;
     }
 
-    qDebug()<<"remove area  error"<<ids<<mFileName;
+    qDebug()<<QString("删除屏蔽区域失败");
     return false;
 }
 
 bool zchxFilterAreaFile::addArea(const zchxCommon::zchxfilterAreaList &list)
 {
+    qDebug()<<QString("开始更新/添加屏蔽区域");
     //更新的情况
     foreach (zchxCommon::zchxFilterArea area, list) {
         int id = 1;
         if(area.id > 0 && mAreaMap.contains(area.id))
         {
+            qDebug()<<QString("屏蔽区域已经存在，更新对应ID:")<<area.id;
             mAreaMap[area.id] = area;
             id = area.id;
         } else
@@ -120,15 +135,16 @@ bool zchxFilterAreaFile::addArea(const zchxCommon::zchxfilterAreaList &list)
             }
             mAreaMap[id] = area;
             mAreaMap[id].id = id;
+            qDebug()<<QString("屏蔽区域不存在，新添加ID:")<<id;
         }
     }
     if(updateFile())
     {
-        qDebug()<<"add area ok"<<mFileName;
+        qDebug()<<QString("更新/添加屏蔽区域成功");
         return true;
     }
 
-    qDebug()<<"add area error"<<mFileName;
+    qDebug()<<QString("更新/添加屏蔽区域失败");
     return false;
 }
 

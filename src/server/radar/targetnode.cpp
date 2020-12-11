@@ -49,10 +49,10 @@ void TargetNode::setStatus(NodeStatus sts)
 
 TargetNode::~TargetNode()
 {
-    if(!mDefRect)
-        qDebug()<<"node discontruct..."<<mSerialNum<<" rect : null";
-    else
-        qDebug()<<"node discontruct..."<<mSerialNum<<" rect: "<<mDefRect->rectnumber();
+//    if(!mDefRect)
+//        qDebug()<<"node discontruct..."<<mSerialNum<<" rect : null";
+//    else
+//        qDebug()<<"node discontruct..."<<mSerialNum<<" rect: "<<mDefRect->rectnumber();
     mChildren.clear();
     if(mDefRect) delete mDefRect;
 }
