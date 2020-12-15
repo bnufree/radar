@@ -65,6 +65,7 @@ zchxRadarChannelReportCtrlDlg::zchxRadarChannelReportCtrlDlg(QWidget *parent) :
 
     ui->video_output_start_btn->setProperty("STATUS", false);
     ui->close_radar_btn->setProperty("STATUS", true);
+    ui->video_output_start_btn->setVisible(false);
 }
 
 void zchxRadarChannelReportCtrlDlg::setControlFrameVisible(bool sts)
