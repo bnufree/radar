@@ -93,7 +93,7 @@ public slots:
     //雷达控制
     void setNormalCtrlValue(int infotype, int value);
     void setCtrlValue(int type, QJsonValue value);
-    void updateReportValue(int controlType, int value);
+    void updateReportValue(int controlType, QJsonValue value);
 
 private slots:
     void slotRecvVideoData(const QByteArray &sRadarData);//解析

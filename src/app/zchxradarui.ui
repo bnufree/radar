@@ -158,7 +158,7 @@ QLineEdit::hover{
    <item>
     <widget class="QTabWidget" name="tab">
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="control_tab">
       <attribute name="title">

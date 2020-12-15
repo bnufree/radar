@@ -277,11 +277,11 @@ INSTALLS += LibFilesInclude5
 
 
 LibFilesLib.path = $$DESTDIRRoot/lib/
-LibFilesLib.files += $$DESTDIR/lib$${TARGET}.dll.a
+LibFilesLib.files += $$BINARIES_PATH/lib$${TARGET}.dll.a
 INSTALLS += LibFilesLib
 
 dlltarget.path = $$DESTDIRRoot/bin/$$CONFIG_NAME
-dlltarget.files =  $$DESTDIR/$${TARGET}.dll
+dlltarget.files =  $$BINARIES_PATH/$${TARGET}.dll
 INSTALLS += dlltarget
 #8)install layerfile
 layertarget.path = $$DESTDIRRoot/bin/mapdata

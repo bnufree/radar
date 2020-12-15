@@ -400,6 +400,8 @@ enum INFOTYPE {
     TARGET_SEPARATION                     		= 15,    
     RESET                                       = 16,
     FAN_IGNORE                                  = 17,
+    OUTPUT_DATA,
+    OPEN,
     RESVERED,
 };
 

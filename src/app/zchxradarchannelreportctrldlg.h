@@ -60,11 +60,16 @@ private slots:
 
     void on_resetRadar_clicked();
 
+    void on_video_output_start_btn_clicked();
+
+    void on_close_radar_btn_clicked();
+
 private:
     Ui::zchxRadarChannelReportCtrlDlg *ui;
     QMap<int, zchxRadarCtrlBtn*>            mBtnList;
     int                                     mRadarID;
     int                                     mChannelID;
+
 };
 
 #endif // ZCHXRADARCHANNELREPORTCTRLDLG_H

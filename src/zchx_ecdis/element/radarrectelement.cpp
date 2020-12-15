@@ -405,232 +405,288 @@ void RadarRectGlowElement::drawRadarRect(QPainter *painter,
 //    }
 }
 
+//void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
+//{
+
+//#if 0
+//    //这里开始旧版本的矩形框输出
+//    //计算在当前层级对应的最大矩形长度
+//    int cur_zoom = mView->framework()->getZoom();
+//    int max_zoom = mView->framework()->getMaxZoom();
+//    double max_mct_len = zchxMapDataUtils::calResolution(max_zoom);
+//    double cur_mct_len = zchxMapDataUtils::calResolution(cur_zoom);
+//    mMaxRectLenthAtZoom = cur_zoom * mMaxRectLength / max_zoom;
+//    //计算开始和结束点之间的距离
+//    mHistoryPixelLength = 0.0;
+//    if(mRect.mHistoryRects.size() > 0)
+//    {
+//        ITF_RadarRectDef pre_rect = mRect.mHistoryRects.last();
+//        ITF_RadarRectDef cur_rect = mRect.current;
+//        QPoint p1 = mView->framework()->LatLon2Pixel(pre_rect.center.lat, pre_rect.center.lon).toPoint();
+//        QPoint p2 = mView->framework()->LatLon2Pixel(cur_rect.center.lat, pre_rect.center.lon).toPoint();
+//        QVector2D vec(p1-p2);
+//        mHistoryPixelLength = vec.length();
+//    }
+
+//    QPolygon line;
+
+//    //开始画当前的目标矩形
+//    drawRadarRect(painter, mRect.blockColor, mRect.blockEdgeColor, mRect.historyBackgroundColor,  mRect.current, true, &line);
+//    //获取第一个目标的大小
+//    double cur_length = 0.0, cur_angle = 0.0;
+//    calculateRect(cur_angle, cur_length, mRect.current);
+
+
+//    //开始画后面的历史轨迹,时间在前的在数组的前面 这里就需要反序遍历
+//    //需要将目标和背景的颜色进行渐变,直到透明
+//    int size = mRect.mHistoryRects.size();
+//    double delta = 255.0 / size;
+//    double width_delta = cur_length / size;
+////    qDebug()<<"current rect width:"<<cur_length<<" delta:"<<width_delta;
+
+//    if(size >= 6 )
+//    {
+//        qsrand(QDateTime::currentDateTime().toTime_t());
+//        for(int i=0; i<size; i++)
+//        {
+//            int index = size - 1 - i;
+//            ITF_RadarRectDef& cur = mRect.rects[i];
+//            cur.isRealSize = false;
+//            //强制对历史回波轨迹的大小进行赋值
+//            cur.referWidth = qRound(index * width_delta);
+//            cur.referHeight = getRectHight(cur.referWidth) * 2;
+//            int color_step = qRound( index * delta);
+//            QColor wk_rect = mRect.HisBlockColor;
+//            wk_rect.setAlpha(color_step);
+//            QColor wk_edge = mRect.blockEdgeColor;
+//            wk_edge.setAlpha(color_step);
+//            QColor wk_back = mRect.historyBackgroundColor;
+//            wk_back.setAlpha(color_step);
+//            drawRadarRect(painter, wk_rect, wk_edge, wk_back, cur, false, &line);
+//        }
+//    }
+
+//    //插入点打印
+//    {
+//        foreach (ZCHX::Data::LatLon ll, mInsertPointList) {
+//            QPoint now = mView->framework()->LatLon2Pixel(ll).toPoint();
+//            painter->setPen(Qt::black);
+//            painter->setBrush(Qt::white);
+//            painter->drawEllipse(now, 5, 5);
+
+//        }
+
+//        foreach (ZCHX::Data::LatLon ll, mOrigonPointList) {
+//            QPoint now = mView->framework()->LatLon2Pixel(ll).toPoint();
+//            painter->setPen(Qt::black);
+//            painter->setBrush(Qt::red);
+//            painter->drawEllipse(now, 5, 5);
+
+//        }
+
+//    }
+//#else
+//    //这里开始输出目标的历史轨迹,再输出目标实际的矩形
+//    QPolygonF path;
+//    path.append(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon).toPointF());
+//    //1)开始画目标的历史轨迹图形
+//    int size = mRect.mHistoryRects.size();
+//    double delta = 1.0;
+//    if(size > 0) delta = 255.0 / size;
+//    //获取当前是需要看几分钟之类的回波图形
+//    int glow_secs = mView->getRectGlowSecs();
+//    QPolygon prePolygon = mRect.mCurrentRect.pixPoints;
+//    for(int i=0; i<mRect.mHistoryRects.size(); i++)
+//    {
+//        ITF_RadarRectDef his = mRect.mHistoryRects[i];
+//        int index = size - 1 - i;
+//        //检查轨迹点的时间是否和实时轨迹点一样, TIMEOFDAY的时间为秒
+//        if(his.updateTime == mRect.mCurrentRect.updateTime) continue;
+//        if(zchx_ecdis_display_radar_glow)
+//        {
+//            //根据目标的长度进行图形缩放透明处理
+//            int alpha = qRound( index * delta);
+//            QColor rectColor = rect_block_color;
+//            if(!his.isRealData) rectColor = Qt::green;
+//            rectColor.setAlpha(alpha);
+//#if 1
+//            if(his.pixPoints.size() == 0)
+//            {
+//                drawPolygon(painter, Qt::transparent, rectColor, prePolygon, his.center.lat, his.center.lon);
+//            } else
+//            {
+//                drawPolygon(painter, Qt::transparent, rectColor, his.pixPoints, his.center.lat, his.center.lon);
+//            }
+//#endif
+//#if 0
+//            //画出目标的预推区域
+//            if(his.predictionAreas.size() > 0)
+//            {
+//                for(int i=0; i<his.predictionAreas.size(); i++)
+//                {
+//                    ITF_SingleVideoBlockList src = his.predictionAreas[i];
+//                    QPolygonF shapePnts;
+//                    for(int k=0; k<src.size(); k++)
+//                    {
+//                        ITF_SingleVideoBlock block = src[k];
+//                        shapePnts.append(mView->framework()->LatLon2Pixel(block.latitude, block.longitude).toPointF());
+//                    }
+
+//                    painter->save();
+//                    painter->setPen(Qt::darkMagenta);
+//                    painter->setBrush(Qt::transparent);
+//                    painter->drawPolygon(shapePnts);
+//                    painter->drawText(shapePnts.boundingRect().center(), QString::number(mRect.rectNumber));
+//                    painter->restore();
+//                }
+//            }
+//#endif
+//        }
+//        path.append(mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPointF());
+
+//    }
+//    //2)画出实际的图形
+//    if(mRect.mCurrentRect.pixPoints.size() > 0)
+//    {
+//        QColor rectColor = rect_block_color;
+//        if(!mRect.mCurrentRect.isRealData) rectColor = Qt::green;
+//        if(zchx_ecdis_display_radar_glow)
+//        {
+//            drawPolygon(painter, Qt::transparent, rectColor, mRect.mCurrentRect.pixPoints, mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon);
+//#if 1
+//            //画出目标的预推区域
+//            QPolygonF shapePnts;
+//            for(int k=0; k<mRect.mCurrentRect.predictionArea.size(); k++)
+//            {
+//                LatLon block = mRect.mCurrentRect.predictionArea[k];
+//                shapePnts.append(mView->framework()->LatLon2Pixel(block.lat, block.lon).toPointF());
+//            }
+//            if(shapePnts.size() > 0)
+//            {
+
+//                painter->save();
+//                painter->setPen(Qt::darkMagenta);
+//                painter->setBrush(Qt::transparent);
+//                painter->drawPolygon(shapePnts);
+//                QString text ;
+//                text.sprintf("%d, %s", mRect.mNodeNumber, QDateTime::fromTime_t(mRect.mCurrentRect.updateTime).toString("yyyy-MM-dd hh:mm:ss").toStdString().data());
+//                painter->drawText(shapePnts.boundingRect().center(),text);
+//                painter->restore();
+//            }
+
+//            //        //画出预推区域的起点和中点
+//            //        painter->save();
+//            //        QPoint start = mView->framework()->LatLon2Pixel(mRect.mCurrentRect.startlatitude, mRect.mCurrentRect.startlongitude).toPoint();
+//            //        QPoint end = mView->framework()->LatLon2Pixel(mRect.mCurrentRect.endlatitude, mRect.mCurrentRect.endlongitude).toPoint();
+
+//            //        painter->setPen(Qt::red);
+//            //        painter->setBrush(Qt::magenta);
+//            //        painter->drawEllipse(start, 4, 4);
+//            //        painter->drawEllipse(end, 4, 4);
+//            //        painter->restore();
+
+
+//#endif
+//        }
+
+//    } else if(zchx_ecdis_display_radar_glow)
+//    {
+//        QPolygonF shapePnts;
+//        for(int i=0; i<mRect.mCurrentRect.outline.size(); i++)
+//        {
+//            LatLon block = mRect.mCurrentRect.outline[i];
+//            shapePnts.append(mView->framework()->LatLon2Pixel(block.lat, block.lon).toPointF());
+//        }
+
+//        painter->save();
+//        painter->setPen(Qt::red);
+//        painter->setBrush(Qt::transparent);
+//        painter->drawPolygon(shapePnts);
+//        painter->restore();
+//    }
+//#if 0
+//    //3)测试目标的最长距离线
+//    painter->save();
+//    painter->setPen(QPen(Qt::white, 2));
+//    painter->drawLine(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.startlatitude, mRect.mCurrentRect.startlongitude).toPointF(),
+//                      mView->framework()->LatLon2Pixel(mRect.mCurrentRect.endlatitude, mRect.mCurrentRect.endlongitude).toPointF());
+
+//    //开始画目标的中心
+//    painter->drawEllipse(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon).toPointF(), 6 ,6);
+//    painter->restore();
+//#endif
+//    //画出目标的轨迹线
+//    painter->save();
+//    if(zchx_ecdis_display_radar_history_track)
+//    {
+//        painter->setPen(QPen(Qt::white, 1, Qt::DashDotDotLine));
+//        painter->drawPolyline(path);
+//        int index = 0;
+//        foreach (QPointF pnt, path) {
+//            painter->setBrush(Qt::green);
+//            painter->drawEllipse(pnt, 3, 3);
+//            painter->drawText(pnt, QString::number(++index));
+//        }
+//    }
+//    painter->restore();
+
+//#endif
+
+//}
+
 void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
 {
-
-#if 0
-    //这里开始旧版本的矩形框输出
-    //计算在当前层级对应的最大矩形长度
-    int cur_zoom = mView->framework()->getZoom();
-    int max_zoom = mView->framework()->getMaxZoom();
-    double max_mct_len = zchxMapDataUtils::calResolution(max_zoom);
-    double cur_mct_len = zchxMapDataUtils::calResolution(cur_zoom);
-    mMaxRectLenthAtZoom = cur_zoom * mMaxRectLength / max_zoom;
-    //计算开始和结束点之间的距离
-    mHistoryPixelLength = 0.0;
-    if(mRect.mHistoryRects.size() > 0)
-    {
-        ITF_RadarRectDef pre_rect = mRect.mHistoryRects.last();
-        ITF_RadarRectDef cur_rect = mRect.current;
-        QPoint p1 = mView->framework()->LatLon2Pixel(pre_rect.center.lat, pre_rect.center.lon).toPoint();
-        QPoint p2 = mView->framework()->LatLon2Pixel(cur_rect.center.lat, pre_rect.center.lon).toPoint();
-        QVector2D vec(p1-p2);
-        mHistoryPixelLength = vec.length();
-    }
-
-    QPolygon line;
-
-    //开始画当前的目标矩形
-    drawRadarRect(painter, mRect.blockColor, mRect.blockEdgeColor, mRect.historyBackgroundColor,  mRect.current, true, &line);
-    //获取第一个目标的大小
-    double cur_length = 0.0, cur_angle = 0.0;
-    calculateRect(cur_angle, cur_length, mRect.current);
-
-
-    //开始画后面的历史轨迹,时间在前的在数组的前面 这里就需要反序遍历
-    //需要将目标和背景的颜色进行渐变,直到透明
-    int size = mRect.mHistoryRects.size();
-    double delta = 255.0 / size;
-    double width_delta = cur_length / size;
-//    qDebug()<<"current rect width:"<<cur_length<<" delta:"<<width_delta;
-
-    if(size >= 6 )
-    {
-        qsrand(QDateTime::currentDateTime().toTime_t());
-        for(int i=0; i<size; i++)
-        {
-            int index = size - 1 - i;
-            ITF_RadarRectDef& cur = mRect.rects[i];
-            cur.isRealSize = false;
-            //强制对历史回波轨迹的大小进行赋值
-            cur.referWidth = qRound(index * width_delta);
-            cur.referHeight = getRectHight(cur.referWidth) * 2;
-            int color_step = qRound( index * delta);
-            QColor wk_rect = mRect.HisBlockColor;
-            wk_rect.setAlpha(color_step);
-            QColor wk_edge = mRect.blockEdgeColor;
-            wk_edge.setAlpha(color_step);
-            QColor wk_back = mRect.historyBackgroundColor;
-            wk_back.setAlpha(color_step);
-            drawRadarRect(painter, wk_rect, wk_edge, wk_back, cur, false, &line);
-        }
-    }
-
-    //插入点打印
-    {
-        foreach (ZCHX::Data::LatLon ll, mInsertPointList) {
-            QPoint now = mView->framework()->LatLon2Pixel(ll).toPoint();
-            painter->setPen(Qt::black);
-            painter->setBrush(Qt::white);
-            painter->drawEllipse(now, 5, 5);
-
-        }
-
-        foreach (ZCHX::Data::LatLon ll, mOrigonPointList) {
-            QPoint now = mView->framework()->LatLon2Pixel(ll).toPoint();
-            painter->setPen(Qt::black);
-            painter->setBrush(Qt::red);
-            painter->drawEllipse(now, 5, 5);
-
-        }
-
-    }
-#else
     //这里开始输出目标的历史轨迹,再输出目标实际的矩形
     QPolygonF path;
     path.append(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon).toPointF());
     //1)开始画目标的历史轨迹图形
     int size = mRect.mHistoryRects.size();
-    double delta = 1.0;
-    if(size > 0) delta = 255.0 / size;
-    //获取当前是需要看几分钟之类的回波图形
-    int glow_secs = mView->getRectGlowSecs();
-    QPolygon prePolygon = mRect.mCurrentRect.pixPoints;
-    for(int i=0; i<mRect.mHistoryRects.size(); i++)
+    quint64  first_time = 0;
+    if(size > 0)
+    {
+        first_time = mRect.mHistoryRects.first().updateTime;
+    }
+    if(first_time != mRect.mCurrentRect.updateTime)
+    {
+        mRect.mHistoryRects.prepend(mRect.mCurrentRect);
+        size++;
+    }
+    //根据不同的显示比列设定图片
+    int cur_zoom = mView->framework()->GetDrawScale();
+    QString img = ":/element/余晖大.png";
+    if(cur_zoom <= 15) img = ":/element/余晖小.png";
+    
+    for(int i=0; i<size; i++)
     {
         ITF_RadarRectDef his = mRect.mHistoryRects[i];
-        int index = size - 1 - i;
-        //检查轨迹点的时间是否和实时轨迹点一样, TIMEOFDAY的时间为秒
-        if(his.updateTime == mRect.mCurrentRect.updateTime) continue;
-        if(zchx_ecdis_display_radar_glow)
-        {
-            //根据目标的长度进行图形缩放透明处理
-            int alpha = qRound( index * delta);
-            QColor rectColor = rect_block_color;
-            if(!his.isRealData) rectColor = Qt::green;
-            rectColor.setAlpha(alpha);
-#if 1
-            if(his.pixPoints.size() == 0)
-            {
-                drawPolygon(painter, Qt::transparent, rectColor, prePolygon, his.center.lat, his.center.lon);
-            } else
-            {
-                drawPolygon(painter, Qt::transparent, rectColor, his.pixPoints, his.center.lat, his.center.lon);
-            }
-#endif
-#if 0
-            //画出目标的预推区域
-            if(his.predictionAreas.size() > 0)
-            {
-                for(int i=0; i<his.predictionAreas.size(); i++)
-                {
-                    ITF_SingleVideoBlockList src = his.predictionAreas[i];
-                    QPolygonF shapePnts;
-                    for(int k=0; k<src.size(); k++)
-                    {
-                        ITF_SingleVideoBlock block = src[k];
-                        shapePnts.append(mView->framework()->LatLon2Pixel(block.latitude, block.longitude).toPointF());
-                    }
-
-                    painter->save();
-                    painter->setPen(Qt::darkMagenta);
-                    painter->setBrush(Qt::transparent);
-                    painter->drawPolygon(shapePnts);
-                    painter->drawText(shapePnts.boundingRect().center(), QString::number(mRect.rectNumber));
-                    painter->restore();
-                }
-            }
-#endif
-        }
+//        if(his.updateTime == mRect.mCurrentRect.updateTime) continue;
+        double angleFromNorth = mView->framework()->GetRotateAngle(); //计算当前正北方向的方向角
+        QPoint pos = mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPoint();
+        PainterPair chk(painter);
+        painter->translate(pos.x(),pos.y());
+        painter->rotate((int)(his.cog + angleFromNorth) % 360);
+        painter->translate(-pos.x(), -pos.y());
+        
+        QPixmap devicePix;
+        devicePix.load(img);
+        QRect  destRect(0, 0, devicePix.width(), devicePix.height());
+        destRect.moveCenter(pos);
+        painter->drawPixmap(destRect, devicePix);
         path.append(mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPointF());
 
     }
-    //2)画出实际的图形
-    if(mRect.mCurrentRect.pixPoints.size() > 0)
+    if(1)
     {
-        QColor rectColor = rect_block_color;
-        if(!mRect.mCurrentRect.isRealData) rectColor = Qt::green;
-        if(zchx_ecdis_display_radar_glow)
-        {
-            drawPolygon(painter, Qt::transparent, rectColor, mRect.mCurrentRect.pixPoints, mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon);
-#if 1
-            //画出目标的预推区域
-            QPolygonF shapePnts;
-            for(int k=0; k<mRect.mCurrentRect.predictionArea.size(); k++)
-            {
-                LatLon block = mRect.mCurrentRect.predictionArea[k];
-                shapePnts.append(mView->framework()->LatLon2Pixel(block.lat, block.lon).toPointF());
-            }
-            if(shapePnts.size() > 0)
-            {
-
-                painter->save();
-                painter->setPen(Qt::darkMagenta);
-                painter->setBrush(Qt::transparent);
-                painter->drawPolygon(shapePnts);
-                QString text ;
-                text.sprintf("%d, %s", mRect.mNodeNumber, QDateTime::fromTime_t(mRect.mCurrentRect.updateTime).toString("yyyy-MM-dd hh:mm:ss").toStdString().data());
-                painter->drawText(shapePnts.boundingRect().center(),text);
-                painter->restore();
-            }
-
-            //        //画出预推区域的起点和中点
-            //        painter->save();
-            //        QPoint start = mView->framework()->LatLon2Pixel(mRect.mCurrentRect.startlatitude, mRect.mCurrentRect.startlongitude).toPoint();
-            //        QPoint end = mView->framework()->LatLon2Pixel(mRect.mCurrentRect.endlatitude, mRect.mCurrentRect.endlongitude).toPoint();
-
-            //        painter->setPen(Qt::red);
-            //        painter->setBrush(Qt::magenta);
-            //        painter->drawEllipse(start, 4, 4);
-            //        painter->drawEllipse(end, 4, 4);
-            //        painter->restore();
-
-
-#endif
-        }
-
-    } else if(zchx_ecdis_display_radar_glow)
-    {
-        QPolygonF shapePnts;
-        for(int i=0; i<mRect.mCurrentRect.outline.size(); i++)
-        {
-            LatLon block = mRect.mCurrentRect.outline[i];
-            shapePnts.append(mView->framework()->LatLon2Pixel(block.lat, block.lon).toPointF());
-        }
-
-        painter->save();
-        painter->setPen(Qt::red);
-        painter->setBrush(Qt::transparent);
-        painter->drawPolygon(shapePnts);
-        painter->restore();
-    }
-#if 0
-    //3)测试目标的最长距离线
-    painter->save();
-    painter->setPen(QPen(Qt::white, 2));
-    painter->drawLine(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.startlatitude, mRect.mCurrentRect.startlongitude).toPointF(),
-                      mView->framework()->LatLon2Pixel(mRect.mCurrentRect.endlatitude, mRect.mCurrentRect.endlongitude).toPointF());
-
-    //开始画目标的中心
-    painter->drawEllipse(mView->framework()->LatLon2Pixel(mRect.mCurrentRect.center.lat, mRect.mCurrentRect.center.lon).toPointF(), 6 ,6);
-    painter->restore();
-#endif
-    //画出目标的轨迹线
-    painter->save();
-    if(zchx_ecdis_display_radar_history_track)
-    {
+        PainterPair chk(painter);
         painter->setPen(QPen(Qt::white, 1, Qt::DashDotDotLine));
         painter->drawPolyline(path);
         int index = 0;
         foreach (QPointF pnt, path) {
             painter->setBrush(Qt::green);
             painter->drawEllipse(pnt, 3, 3);
-            painter->drawText(pnt, QString::number(++index));
+//            painter->drawText(pnt, QString::number(++index));
         }
     }
-    painter->restore();
-
-#endif
 
 }
 

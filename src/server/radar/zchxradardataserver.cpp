@@ -179,6 +179,8 @@ ZCHXRadarDataServer::ZCHXRadarDataServer(zchxRadarOutputDataMgr* mgr, const zchx
     {
         qDebug()<<"output dir already exist:"<<mDataSaveDir;
     }
+    updateReportValue(zchxCommon::OUTPUT_DATA, mOutputData);
+    updateReportValue(zchxCommon::OPEN, false);
 
 //    if(!parent)
 //    {
@@ -621,7 +623,28 @@ void ZCHXRadarDataServer::setNormalCtrlValue(int infotype, int value)
 
 void ZCHXRadarDataServer::setCtrlValue(int type, QJsonValue value)
 {
-    if(type < zchxCommon::FAN_IGNORE)
+    if(type == zchxCommon::OPEN)
+    {
+        if(!value.toBool())
+        {
+            slotCloseRadar();
+        } else
+        {
+            slotOpenRadar();
+        }
+        return;
+    } else if(type == zchxCommon::OPEN)
+    {
+        if(value.toBool())
+        {
+            slotPrintRecvData(true);
+        } else
+        {
+            slotPrintRecvData(false);
+        }
+        return;
+
+    } else if(type < zchxCommon::FAN_IGNORE)
     {
         setNormalCtrlValue(type, value.toInt());
         return;
@@ -652,7 +675,7 @@ void ZCHXRadarDataServer::setCtrlValue(int type, QJsonValue value)
 
 
 
-void ZCHXRadarDataServer::updateReportValue(int controlType, int value)
+void ZCHXRadarDataServer::updateReportValue(int controlType, QJsonValue value)
 {
     //检查值的范围
     if(controlType <= zchxCommon::UNKNOWN ||  controlType > zchxCommon::RESVERED)
@@ -672,7 +695,7 @@ void ZCHXRadarDataServer::updateReportValue(int controlType, int value)
     zchxCommon::zchxRadarReportData data;
     data.timeOfDay = QDateTime::fromString(mChannelReport.time, "yyyyMMdd hh:mm:ss").toMSecsSinceEpoch();
     data.type = controlType;
-    data.jsval = QJsonValue(value);
+    data.jsval = value;
     if(index == -1) mChannelReport.reportList.append(data);
     else mChannelReport.reportList.replace(index, data);
     return;
@@ -699,10 +722,12 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         case 0x01:
 //            qDebug()<<"reports status RADAR_STANDBY";
             updateReportValue(zchxCommon::POWER,0);
+            updateReportValue(zchxCommon::OPEN, false);
             break;
         case 0x02:
 //            qDebug()<<"reports status TRANSMIT";
             updateReportValue(zchxCommon::POWER,1);
+            updateReportValue(zchxCommon::OPEN, true);
             break;
         case 0x05:
 //            qDebug()<<"reports status WAKING UP";
@@ -726,7 +751,7 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         if (s->field13 == 0x01)
             updateReportValue(zchxCommon::SEA_CLUTTER,-1);  // auto sea
         else
-            updateReportValue(zchxCommon::SEA_CLUTTER,s->sea * 100 / 255);
+            updateReportValue(zchxCommon::SEA_CLUTTER,int(s->sea * 100 / 255));
         //rain
         updateReportValue(zchxCommon::RAIN_CLUTTER, s->rain * 100 / 255);
         //target boost
@@ -736,7 +761,7 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         //target expansion
         updateReportValue(zchxCommon::TARGET_EXPANSION, s->target_expansion);
         //range
-        updateReportValue(zchxCommon::RANG, s->range / 10);
+        updateReportValue(zchxCommon::RANG, int(s->range / 10));
         break;
     }
     case (129 << 8) + 0x03: // 129 bytes starting with 03 C4
@@ -856,6 +881,7 @@ void ZCHXRadarDataServer::compressFiles(QStringList &list, QString &fileName)
 
 void ZCHXRadarDataServer::slotPrintRecvData(bool sts)//打印回波数据
 {
+    updateReportValue(zchxCommon::OUTPUT_DATA, sts);
     mOutputData = sts;
     if(!mOutputData)
     {

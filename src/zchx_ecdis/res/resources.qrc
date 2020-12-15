@@ -195,5 +195,9 @@
         <file>aidtoNavigation/West cardinal mark.png</file>
         <file>navimark_green.png</file>
         <file>navimark_red.png</file>
+        <file>element/余晖大.png</file>
+        <file>element/余晖大2.png</file>
+        <file>element/余晖小.png</file>
+        <file>element/余晖小2.png</file>
     </qresource>
 </RCC>

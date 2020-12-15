@@ -20,7 +20,7 @@
 	max-width:40px;
 }
 
-#resetRadar,#video_output_start_btn{
+#resetRadar,#video_output_start_btn,#close_radar_btn{
 	max-width:60px;
 }
 
@@ -47,6 +47,142 @@
    <item>
     <widget class="QFrame" name="common_frame">
      <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="Power_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>雷达电源</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="zchxRadarCtrlBtn" name="power_statsu_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="speed_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>扫描速度</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="zchxRadarCtrlBtn" name="scan_seed_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="Antenna_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>天线高度  </string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="zchxRadarCtrlBtn" name="antenna_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="Bearing_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>方位校准</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="zchxRadarCtrlBtn" name="bearing_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="Side_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>旁瓣抑制  </string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="zchxRadarCtrlBtn" name="sidelobe_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="Noise_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>噪声抑制</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="zchxRadarCtrlBtn" name="noise_injection_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="expansion_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>目标扩展  </string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="zchxRadarCtrlBtn" name="target_expansion_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="Gain_label">
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string>增益    </string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="zchxRadarCtrlBtn" name="gain_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
       <item row="4" column="0">
        <widget class="QLabel" name="Rang_label">
         <property name="styleSheet">
@@ -149,170 +285,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="zchxRadarCtrlBtn" name="sidelobe_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QLabel" name="Noise_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>噪声抑制</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="Power_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>雷达电源</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="zchxRadarCtrlBtn" name="power_statsu_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="speed_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>扫描速度</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="Antenna_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>天线高度  </string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="zchxRadarCtrlBtn" name="antenna_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="zchxRadarCtrlBtn" name="scan_seed_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="Bearing_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>方位校准</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3">
-       <widget class="zchxRadarCtrlBtn" name="bearing_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="expansion_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>目标扩展  </string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="Side_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>旁瓣抑制  </string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="zchxRadarCtrlBtn" name="target_expansion_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="3">
-       <widget class="zchxRadarCtrlBtn" name="noise_injection_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="3">
-       <widget class="zchxRadarCtrlBtn" name="gain_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2">
-       <widget class="QLabel" name="Gain_label">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>增益    </string>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="1">
-       <widget class="QLabel" name="radius">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="3">
-       <widget class="QLabel" name="factor">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="3">
-       <widget class="QLabel" name="radar_type">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
-       <widget class="zchxRadarCtrlBtn" name="rain_culter_btn">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
       <item row="7" column="0">
        <widget class="QLabel" name="Rain_label">
         <property name="styleSheet">
@@ -323,10 +295,24 @@
         </property>
        </widget>
       </item>
+      <item row="7" column="1">
+       <widget class="zchxRadarCtrlBtn" name="rain_culter_btn">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
       <item row="7" column="2">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>雷达类型</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="3">
+       <widget class="QLabel" name="radar_type">
+        <property name="text">
+         <string/>
         </property>
        </widget>
       </item>
@@ -337,6 +323,13 @@
         </property>
         <property name="text">
          <string>回波半径</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="QLabel" name="radius">
+        <property name="text">
+         <string/>
         </property>
        </widget>
       </item>
@@ -356,28 +349,46 @@
         </property>
        </widget>
       </item>
-      <item row="9" column="0">
-       <widget class="QPushButton" name="resetRadar">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
+      <item row="8" column="3">
+       <widget class="QLabel" name="factor">
         <property name="text">
-         <string>重置雷达</string>
+         <string/>
         </property>
        </widget>
       </item>
-      <item row="9" column="2">
-       <widget class="QPushButton" name="video_output_start_btn">
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="text">
-         <string>打印回波</string>
-        </property>
-       </widget>
+      <item row="9" column="0" colspan="4">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QPushButton" name="resetRadar">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>重置雷达</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="video_output_start_btn">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="text">
+           <string>打印回波</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="close_radar_btn">
+          <property name="text">
+           <string>关闭雷达</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -400,85 +411,8 @@
       <property name="spacing">
        <number>6</number>
       </property>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="fan1">
-        <property name="text">
-         <string>匿形1</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>角度</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="2">
        <widget class="QSpinBox" name="angle1">
-        <property name="maximum">
-         <number>359</number>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>宽度</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="4">
-       <widget class="QSpinBox" name="width3">
-        <property name="maximum">
-         <number>359</number>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QCheckBox" name="fan3">
-        <property name="text">
-         <string>匿形3</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QSpinBox" name="angle3">
-        <property name="maximum">
-         <number>359</number>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="4">
-       <widget class="QSpinBox" name="width2">
-        <property name="maximum">
-         <number>359</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLabel" name="label_9">
-        <property name="text">
-         <string>角度</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QCheckBox" name="fan4">
-        <property name="text">
-         <string>匿形4</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2">
-       <widget class="QSpinBox" name="angle4">
-        <property name="maximum">
-         <number>359</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="4">
-       <widget class="QSpinBox" name="width4">
         <property name="maximum">
          <number>359</number>
         </property>
@@ -491,10 +425,24 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="3">
-       <widget class="QLabel" name="label_6">
+      <item row="3" column="4">
+       <widget class="QSpinBox" name="width4">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QCheckBox" name="fan4">
         <property name="text">
-         <string>宽度</string>
+         <string>匿形4</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="fan1">
+        <property name="text">
+         <string>匿形1</string>
         </property>
        </widget>
       </item>
@@ -505,10 +453,45 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="3">
-       <widget class="QLabel" name="label_10">
+      <item row="2" column="2">
+       <widget class="QSpinBox" name="angle3">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="label_9">
         <property name="text">
-         <string>宽度</string>
+         <string>角度</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QSpinBox" name="angle2">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QSpinBox" name="width3">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QSpinBox" name="angle4">
+        <property name="maximum">
+         <number>359</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="fan3">
+        <property name="text">
+         <string>匿形3</string>
         </property>
        </widget>
       </item>
@@ -519,8 +502,29 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="3">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>宽度</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="1">
        <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>角度</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>宽度</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="label_3">
         <property name="text">
          <string>角度</string>
         </property>
@@ -533,8 +537,15 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QSpinBox" name="angle2">
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>宽度</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="4">
+       <widget class="QSpinBox" name="width2">
         <property name="maximum">
          <number>359</number>
         </property>

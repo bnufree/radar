@@ -1,6 +1,7 @@
 ﻿#include "zchxradarchannelreportctrldlg.h"
 #include "ui_zchxradarchannelreportctrldlg.h"
 #include <QDebug>
+#include <QTimer>
 
 #define  MOD(val) (((val) < 0) ? ((val) + 360) :((val) >= 3600 ? ((val) - 3600) : (val)))
 
@@ -61,6 +62,9 @@ zchxRadarChannelReportCtrlDlg::zchxRadarChannelReportCtrlDlg(QWidget *parent) :
     ui->fan2->setChecked(false);
     ui->fan3->setChecked(false);
     ui->fan4->setChecked(false);
+
+    ui->video_output_start_btn->setProperty("STATUS", false);
+    ui->close_radar_btn->setProperty("STATUS", true);
 }
 
 void zchxRadarChannelReportCtrlDlg::setControlFrameVisible(bool sts)
@@ -99,6 +103,32 @@ void zchxRadarChannelReportCtrlDlg::setReportInfo(const zchxCommon::zchxRadarRep
             if(btn)
             {
                 btn->setValue(ctrl.jsval.toInt());
+            }
+        } else
+        {
+            qDebug()<<ctrl.type<<ctrl.jsval;
+            if(ctrl.type == zchxCommon::OUTPUT_DATA)
+            {
+                if(ctrl.jsval.toBool())
+                {
+                    ui->video_output_start_btn->setText(QString::fromUtf8("停止回波打印"));
+                } else
+                {
+                    ui->video_output_start_btn->setText(QString::fromUtf8("开始回波打印"));
+                }
+                ui->video_output_start_btn->setProperty("STATUS", ctrl.jsval.toBool());
+
+            } else if(ctrl.type == zchxCommon::OPEN)
+            {
+                if(ctrl.jsval.toBool())
+                {
+                    ui->close_radar_btn->setText(QString::fromUtf8("关闭雷达"));
+                } else
+                {
+                    ui->close_radar_btn->setText(QString::fromUtf8("打开雷达"));
+                }
+
+                ui->close_radar_btn->setProperty("STATUS", ctrl.jsval.toBool());
             }
         }
     }
@@ -259,4 +289,23 @@ void zchxRadarChannelReportCtrlDlg::on_width4_valueChanged(int arg1)
 void zchxRadarChannelReportCtrlDlg::on_resetRadar_clicked()
 {
     emit signalCtrlValChanged(zchxCommon::RESET, QJsonValue());
+}
+
+void zchxRadarChannelReportCtrlDlg::on_video_output_start_btn_clicked()
+{
+
+    emit signalCtrlValChanged(zchxCommon::OUTPUT_DATA, !(ui->video_output_start_btn->property("STATUS").toBool()));
+    ui->video_output_start_btn->setEnabled(false);
+    QTimer::singleShot(3000, this, [=](){
+        ui->video_output_start_btn->setEnabled(true);
+    });
+}
+
+void zchxRadarChannelReportCtrlDlg::on_close_radar_btn_clicked()
+{
+    emit signalCtrlValChanged(zchxCommon::OPEN, !(ui->close_radar_btn->property("STATUS").toBool()));
+    ui->close_radar_btn->setEnabled(false);
+    QTimer::singleShot(3000, this, [=](){
+        ui->close_radar_btn->setEnabled(true);
+    });
 }
