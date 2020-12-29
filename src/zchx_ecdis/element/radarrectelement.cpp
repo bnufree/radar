@@ -659,23 +659,25 @@ void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
     for(int i=0; i<size; i++)
     {
         ITF_RadarRectDef his = mRect.mHistoryRects[i];
-//        if(his.updateTime == mRect.mCurrentRect.updateTime) continue;
-        double angleFromNorth = mView->framework()->GetRotateAngle(); //计算当前正北方向的方向角
-        QPoint pos = mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPoint();
-        PainterPair chk(painter);
-        painter->translate(pos.x(),pos.y());
-        painter->rotate((int)(his.cog + angleFromNorth) % 360);
-        painter->translate(-pos.x(), -pos.y());
-        
-        QPixmap devicePix;
-        devicePix.load(img);
-        QRect  destRect(0, 0, devicePix.width(), devicePix.height());
-        destRect.moveCenter(pos);
-        painter->drawPixmap(destRect, devicePix);
+        if(zchx_ecdis_display_radar_glow)
+        {
+            double angleFromNorth = mView->framework()->GetRotateAngle(); //计算当前正北方向的方向角
+            QPoint pos = mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPoint();
+            PainterPair chk(painter);
+            painter->translate(pos.x(),pos.y());
+            painter->rotate((int)(his.cog + angleFromNorth) % 360);
+            painter->translate(-pos.x(), -pos.y());
+
+            QPixmap devicePix;
+            devicePix.load(img);
+            QRect  destRect(0, 0, devicePix.width(), devicePix.height());
+            destRect.moveCenter(pos);
+            painter->drawPixmap(destRect, devicePix);
+        }
         path.append(mView->framework()->LatLon2Pixel(his.center.lat, his.center.lon).toPointF());
 
     }
-    if(1)
+    if(zchx_ecdis_display_radar_history_track)
     {
         PainterPair chk(painter);
         painter->setPen(QPen(Qt::white, 1, Qt::DashDotDotLine));
@@ -684,7 +686,6 @@ void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
         foreach (QPointF pnt, path) {
             painter->setBrush(Qt::green);
             painter->drawEllipse(pnt, 3, 3);
-//            painter->drawText(pnt, QString::number(++index));
         }
     }
 

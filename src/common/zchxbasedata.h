@@ -32,6 +32,18 @@ public:
     inline  zchxDataList() : QList<T>()  { }
     inline  zchxDataList(const T& val) : QList<T>() { this->append(val);}
     inline  zchxDataList(const QList<T>& list) : QList<T>(list) {}
+
+    zchxDataList& operator =(const zchxDataList<T>& other)
+    {
+        if(this != &other)
+        {
+            this->clear();
+            this->append(other.mid(0));
+        }
+
+        return *this;
+    }
+
     zchxDataList(const QJsonArray& array) : QList<T>()
     {
         this->clear();

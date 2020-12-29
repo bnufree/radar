@@ -46,9 +46,9 @@ public:
                                   QObject *parent = 0);
     ~zchxRadarVideoParser();
     bool    isSameParseSetting(const zchxVideoParserSettings& setting);
-    void    updateParseSetting(const zchxVideoParserSettings& setting);
 
 signals:
+    void signalHeadChnaged(int head);
 public slots:
     void slotSetGpsData(double, double);//实时更新从GPS传入的经纬度坐标
     //结果发送出去
@@ -59,7 +59,7 @@ public slots:
     //手动指定雷达类型
     void slotSetRadarType(int type);
     void slotRecvVideoData(const QByteArray& bytes);
-    void slotSetRadarHead(double head);
+
 private:
     void processVideoData(bool rotate = true);
     void InitializeLookupData();
@@ -71,7 +71,7 @@ private:
     QMap<int,RADAR_VIDEO_DATA>      mRadarVideoMap1T;//一周期回波数据key是azimuth,这里需要注意统一成中间点的角度,因为有时接收到的值有可能是奇数有时是偶数
     int                             mStartAzimuth  = -1;
     ZCHXRadarVideoProcessor*        mVideoProcessor;                  //回波处理成矩形目标点
-    zchxRadarTargetTrack*           mTrackProcessor;                     //矩形目标点进行目标跟踪
+    zchxRadarTargetTrack*           mTargetTrackProcessor;                     //矩形目标点进行目标跟踪
     int                             mDopplerVal;
     zchxRadarOutputDataMgr*         mRadarOutMgr;
     QTime                           mCounterT;

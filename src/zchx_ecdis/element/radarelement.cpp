@@ -444,6 +444,7 @@ void RadarPointElement::drawText(QPainter *painter, QPointF pos, int sideLen)
         painter->setFont(font);
         painter->drawText(pos.x()+2+sideLen / 2,pos.y() + sideLen / 2,radarName);
     }
+    if(!m_data.directionConfirmed) return;
     painter->setPen(mBorderColor);
     painter->translate(pos.x(),pos.y());
     painter->rotate((int)(getData().currentRect.cog + angleFromNorth) % 360);
@@ -482,8 +483,8 @@ void RadarPointElement::showToolTip(const QPoint &pos)
     pos_text += QObject::tr("经度: %1\n").arg(FLOAT_STRING(info.getLat(), 6));
     pos_text += QObject::tr("纬度: %1\n").arg(FLOAT_STRING(info.getLon(), 6));;
     pos_text += QObject::tr("更新时间: %1\n").arg(QDateTime::fromTime_t(info.currentRect.updateTime).toString("MM/dd/yyyy HH:mm:ss"));
-    pos_text += QObject::tr("方位角: %1\n").arg(FLOAT_STRING(info.currentRect.cog, 0));
-    pos_text += QObject::tr("速度: %1").arg(FLOAT_STRING(info.currentRect.sogKnot, 2));
+    pos_text += QObject::tr("方位角（正北方向）: %1\n").arg(FLOAT_STRING(info.currentRect.cog, 0));
+    pos_text += QObject::tr("速度(节): %1").arg(FLOAT_STRING(info.currentRect.sogKnot, 2));
     QToolTip::showText(pos, pos_text);
 }
 

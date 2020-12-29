@@ -2,24 +2,10 @@
 #include <QDebug>
 #include <QGeoCoordinate>
 
-const bool track_debug = false;
 
-const double point_near_line = 200;
-const double ship_max_speed = 5.0;            //5m/s ~~ 10节  10m/s 就是20节
+#define     DEBUG_TRACK_INFO                if(0) qDebug()
 
 
-#define     DEBUG_TRACK_INFO                0
-
-
-//double getDeltaTime(float now, float old)
-//{
-//    double delta = now - old;
-//    if(delta < 0)
-//    {
-//        delta += 3600 * 24;
-//    }
-//    return delta;
-//}
 extern bool restart_simulate;
 extern int  target_silent_confirm_counter;
 extern bool output_silent_node;
@@ -36,21 +22,20 @@ QPolygonF  predictionAreaLL2PolygonF(const com::zhichenhaixin::proto::Prediction
     return poly;
 }
 zchxRadarTargetTrack::zchxRadarTargetTrack(const zchxVideoParserSettings& setting, QObject *parent)
-#ifdef TRACK_THREAD
     : QThread(parent)
-#else
-    : QObject(parent)
-#endif
-
     , mSettings(setting)
     , mMaxEstCount(5)
     , mTargetPredictionInterval(2)
+    , mIsOver(false)
+    , mLastVideoDataTime(0)
 {
+    mMaxSpeed = mSettings.user_video_parse.max_target_speed * 1.852 / 3.6;
     mMinNum = (setting.radar_id * 10 + setting.channel_id) * 10000;
     mMaxNum = mMinNum + 9998;
     mRectNum = mMinNum;
-    target_silent_confirm_counter = setting.confirm_target_cnt;
-    qRegisterMetaType<zchxRadarSurfaceTrack>("const zchxRadarSurfaceTrack&");
+    target_silent_confirm_counter = setting.user_video_parse.confirm_target_cnt;
+    qRegisterMetaType<zchxRadarSurfaceTrack>("const zchxRadarSurfaceTrack&");    
+    qRegisterMetaType<videoParseData>("const videoParseData&");
 }
 
 zchxRadarTargetTrack::~zchxRadarTargetTrack()
@@ -58,15 +43,15 @@ zchxRadarTargetTrack::~zchxRadarTargetTrack()
     mTargetNodeMap.clear();
 }
 
-void zchxRadarTargetTrack::appendTask(const zchxRadarRectDefList &task)
+void zchxRadarTargetTrack::appendTrackTask(const zchxRadarRectDefList& task)
 {
-    QMutexLocker locker(&mMutex);
+    QMutexLocker locker(&mTaskMutex);
     mTaskList.append(task);
 }
 
-bool zchxRadarTargetTrack::getTask(zchxRadarTrackTask &task)
+bool zchxRadarTargetTrack::getTask(zchxRadarRectDefList &task)
 {
-    QMutexLocker locker(&mMutex);
+    QMutexLocker locker(&mTaskMutex);
     if(mTaskList.size() == 0) return false;
     task = mTaskList.takeLast();
     if(mTaskList.size() > 0)
@@ -77,12 +62,11 @@ bool zchxRadarTargetTrack::getTask(zchxRadarTrackTask &task)
 
 }
 
-#ifdef TRACK_THREAD
 void zchxRadarTargetTrack::run()
 {
-    while (true) {
+    while (!mIsOver) {
         //获取当前的任务
-        zchxRadarTrackTask task;
+        zchxRadarRectDefList task;
         if(!getTask(task))
         {
             msleep(1000);
@@ -92,9 +76,8 @@ void zchxRadarTargetTrack::run()
         process(task);
     }
 }
-#endif
 
-void zchxRadarTargetTrack::mergeRectTargetInDistance(zchxRadarTrackTask &temp_list, int target_merge_distance)
+void zchxRadarTargetTrack::mergeRectTargetInDistance(zchxRadarRectDefList &temp_list, int target_merge_distance)
 {
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     //目标预处理.将距离太近的目标进行合并,合并的中心点取二者的重点
@@ -175,8 +158,8 @@ void zchxRadarTargetTrack::changeTargetLL(const Latlon &ll, zchxRadarRectDef &cu
 bool zchxRadarTargetTrack::isDirectionChange(double src, double target)
 {
     //计算原角度对应的相反角度的范围,反映到0-360的范围
-    int min = int(src - mSettings.direction_invert_hold);
-    int max = int(src + mSettings.direction_invert_hold);
+    int min = int(src - mSettings.user_video_parse.direction_invert_hold);
+    int max = int(src + mSettings.user_video_parse.direction_invert_hold);
     if(min < 0)
     {
         //原方向指向右上方向,则有效值的范围是min_+360 ~ 360, 0~max
@@ -214,352 +197,269 @@ bool zchxRadarTargetTrack::isRectAreaContainsPoint(const zchxRadarRectDef &rect,
     return sts;
 }
 
-void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &task)
+void zchxRadarTargetTrack::CounterPossibleChildRect(QList<AreaNodeTable>& areaTableList, QMap<TargetNode*, zchxRadarRectDefList>& result , const zchxRadarRectDefList& rects)
 {
-    if(task.size() == 0) return;
-    int cur_cycle_index = task.first().videocycleindex();
-//    zchxTimeElapsedCounter counter(__FUNCTION__);
-    zchxRadarRectDefList temp_list(task);             //保存的未经处理的所有矩形单元
-    quint32 now_time = task.first().updatetime();
-   if(track_debug) qDebug()<<"now process list time:"<<QDateTime::fromTime_t(task.first().updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
-
-
-    QTime t;
-    int elapsed = 0;
-    t.start();
-    //默认扫描周期是3s，最大速度是10m/s
-    double max_speed = mSettings.max_target_speed * 1.852 / 3.6;
-    QList<AreaNodeTable> areaTableList = calculateTargetTrackMode(max_speed, task.first().updatetime(), mSettings.scan_time);
-    QList<int>  used_index_list;
-
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" calculate prediction area elaped:"<<elapsed;
-    t.start();
-
-    if(areaTableList.size() > 0)
+    zchxTimeElapsedCounter counter(__FUNCTION__);
+    result.clear();
+    //先检查每一个区域内落入了哪些目标
+    for(int i=0; i<areaTableList.size(); i++)
     {
-        //先检查每一个区域内落入了哪些目标
-        for(int i=0; i<areaTableList.size(); i++)
+        AreaNodeTable &table = areaTableList[i];
+        for(int k=0; k<rects.size(); k++)
         {
-            AreaNodeTable &table = areaTableList[i];
-            for(int k=0; k<temp_list.size(); k++)
+            zchxRadarRectDef def = rects[k];
+            Mercator pos = latlonToMercator(def.center().latitude(), def.center().longitude());
+            if(table.mArea.containsPoint(pos.toPointF(), Qt::OddEvenFill))
             {
-                zchxRadarRectDef def = temp_list[k];
-                Mercator pos = latlonToMercator(def.center().latitude(), def.center().longitude());
-                if(table.mArea.containsPoint(pos.toPointF(), Qt::OddEvenFill))
-                {
-                    table.mRectList.append(def);
-                }
-            }
-            //打印每一个预推区域对应的回波中心矩形
-            if(DEBUG_TRACK_INFO)
-            {
-                QStringList node_number_list;
-                foreach (TargetNode* node, table.mNodeList) {
-                    node_number_list.append(QString::number(node->mSerialNum));
-                }
-                QStringList rectNumList;
-                foreach (zchxRadarRectDef def, table.mRectList) {
-                    rectNumList.append(QString::number(def.rectnumber()));
-                }
-                if(track_debug) qDebug()<<"prediction["<<i+1<<"] has node list:"<<node_number_list.join(" ")<<" rect num:"<<rectNumList.join(" ");
-            }
-        }
-        //开始统计整理，每一个节点现在有多少个待选节点
-        QMap<TargetNode*, zchxRadarRectDefList> counter_map;
-        QMap<int, QList<int>>                   used_node_rectMap;
-        foreach (AreaNodeTable table, areaTableList) {
-            foreach (TargetNode* node, table.mNodeList) {
-#if 1
-                counter_map[node].append(table.mRectList);
-#else
-                //这里需要添加矩形重复的过滤，避免多次重复
-                foreach (zchxRadarRectDef def, table.mRectList) {
-                    if(used_node_rectMap.contains(node->mSerialNum) &&
-                            used_node_rectMap[node->mSerialNum].contains(def.rectnumber()))
-                    {
-                        continue;
-                    }
-                    counter_map[node].append(def);
-                    used_node_rectMap[node->mSerialNum].append(def.rectnumber());
-                }
-#endif
-            }
-        }
-        if(DEBUG_TRACK_INFO)
-        {
-            QMap<TargetNode*, zchxRadarRectDefList>::iterator it = counter_map.begin();
-            for(; it != counter_map.end(); it++)
-            {
-                TargetNode* node = it.key();
-                if(!node) continue;
-                QStringList rectNumList;
-                foreach (zchxRadarRectDef def, it.value()) {
-
-                        rectNumList.append(QString::number(def.rectnumber()));
-                }
-
-                if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" has releated rect:"<<rectNumList.join(",");
-            }
-        }
-        //开始将新的目标更新到旧目标对应的路径
-        struct DetermineNode{
-            bool selectedRealNode;
-            zchxRadarRectDefList targetList;
-        };
-
-        QMap<TargetNode*, zchxRadarRectDefList>::iterator it = counter_map.begin();
-        for(; it != counter_map.end(); it++)
-        {
-            TargetNode* node = it.key();
-            if(!node) continue;
-            zchxRadarRectDefList targetList = it.value();
-            TargetNode *topNode = node->topNode();
-            int path_size = 0;
-            if(topNode) path_size = topNode->mChildren.size();
-
-            DetermineNode determination;
-
-            if(targetList.size() > 0)
-            {
-                determination.selectedRealNode = true;
-                if(DEBUG_TRACK_INFO)
-                {
-                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is about to find the corresponding rect. rect size:"<<targetList.size();
-                }
-
-                if(node->mParent)
-                {
-                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is a child. find the closest rect"<<" path size:"<<path_size;
-                    //如果节点是目标路径上的子节点，那么候选目标就只有一个，选择距离预推运动点最近的目标
-                    int    index = -1;
-                    double delta_time = now_time - node->mDefRect->updatetime();
-                    QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
-                    //计算目标的预推位置
-                    double delta_dis = node->mDefRect->sogms() * delta_time;
-                    QGeoCoordinate dest = source.atDistanceAndAzimuth(delta_dis, node->mDefRect->cog());
-                    int    min_dis = INT32_MAX;
-                    QList<int>  index_list;
-                    for(int i=0; i<targetList.size();i++)
-                    {
-                        zchxRadarRectDef def = targetList[i];
-                        if(index_list.contains(def.rectnumber())) continue;
-                        index_list.append(def.rectnumber());
-                        double dis = dest.distanceTo(QGeoCoordinate(def.center().latitude(), def.center().longitude()));
-                        if(dis < min_dis)
-                        {
-                            min_dis = dis;
-                            index = i;
-                        }
-                    }
-                    zchxRadarRectDef def =  targetList.takeAt(index);
-                    targetList.clear();
-                    targetList.append(def);
-                } else
-                {
-                    //如果节点是第一个节点，那么目标的候选节点可以多个，暂且将所有点都添加到目标的候选中。
-                    //这里就不进行任何其他操作
-                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" is a top node. all coresspond rect appended"<<" path size:"<<path_size<<" to be added targe size:"<<targetList.size();
-                }
-                determination.targetList.append(targetList);
-
-                if(DEBUG_TRACK_INFO)
-                {
-                    QStringList rectNumList;
-                    foreach (zchxRadarRectDef def, targetList) {
-
-                            rectNumList.append(QString::number(def.rectnumber()));
-                    }
-
-                    if(track_debug) qDebug()<<"node: "<<node->mSerialNum<<" has select rect:"<<rectNumList;
-                }
-            } else
-            {
-                determination.selectedRealNode = false;
-                //预推区域内没有找到目标图形，现在看看是否在一个回波图形上
-                if(DEBUG_TRACK_INFO) qDebug()<<"node "<<node->mSerialNum<<" has no selected rect. now check whether it is in an exist rect.";
-                //检查当前目标是否落在了某一个回波图形上
-                for(int i=0; i<temp_list.size(); i++)
-                {
-                    zchxRadarRectDef rect = temp_list[i];
-                    if(isRectAreaContainsPoint(rect, node->mDefRect->center().latitude(), node->mDefRect->center().longitude()))
-                    {
-                        if(DEBUG_TRACK_INFO)    qDebug()<<"find node in rect. node_number:"<<node->mSerialNum<<" origin rect number:"<<rect.rectnumber();
-                        targetList.append(rect);
-                        break;
-                    }
-                }
-                if(targetList.size() > 0)
-                {
-                    determination.targetList.append(targetList);
-                }
-            }
-            if(determination.targetList.size() == 0) continue;
-
-
-            //根据候选目标来源的不同，进行分别处理
-            if(determination.selectedRealNode)
-            {
-                if(DEBUG_TRACK_INFO) qDebug()<<"update current node with rect in its prediction area";
-                //目标来源于真实的路径预推，直接更新到对应的路径
-                foreach (zchxRadarRectDef target, determination.targetList) {
-                    //获取选择的目标，更新速度等
-                    if(!used_index_list.contains(target.rectnumber()))
-                    {
-                        if(DEBUG_TRACK_INFO) qDebug()<<"add origin rect into used list , not make new node from it."<<target.rectnumber();
-                        used_index_list.append(target.rectnumber());
-                    }
-                    if(node->containsRect(target)) continue;
-
-                    target.set_realdata(true);
-                    QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
-                    QGeoCoordinate dest(target.center().latitude(), target.center().longitude());
-                    double delta_time = now_time - node->mDefRect->updatetime();
-                    double cog = source.azimuthTo(dest);
-                    double distance = source.distanceTo(dest);
-                    double sog = 0.0;
-                    if(delta_time > 0) sog = distance / delta_time;
-                    //开始平均速度和角度
-                    double refer_sog = node->getReferenceSog();
-                    if(refer_sog > 0.1)
-                    {
-                        sog = (sog + refer_sog) / 2.0;
-                    }
-                    target.set_cog(cog);
-                    target.set_sogms(sog);
-                    bool ok = true;
-                    if(node->mDefRect->sogms() > 1.0 && (sog > node->mDefRect->sogms() * 2.0)) ok = false;
-                    if(1)
-                    {
-                        node->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, node)));
-                        if(node->isTopNode()){
-                            if(DEBUG_TRACK_INFO) qDebug()<<"top node. node number: "<<node->mSerialNum<<" chiildren size:"<<node->mChildren.size()<<" directly"<<target.rectnumber();
-                        }
-                        if(DEBUG_TRACK_INFO) qDebug()<<"add child node into path. node number: "<<node->mSerialNum<<" rect number:"<<target.rectnumber();
-                    }
-                 }
-
-            } else
-            {
-                if(DEBUG_TRACK_INFO) qDebug()<<"update current node with rect for node is rect area...this wanna not see. ";
-                //目标节点本身没有更新，只是他现在处在一个回波图形上，如果他不更新，则有可能同一个回波图形在不同的位置出现了多个目标，
-                //为了避免这种情况,我们还是假定目标移动到了回波图形的中心。
-
-                zchxRadarRectDef target = targetList.first();
-                if(!used_index_list.contains(target.rectnumber()))
-                {
-                    if(DEBUG_TRACK_INFO) qDebug()<<"add origin rect into used list , not make new node from it."<<target.rectnumber();
-                    used_index_list.append(target.rectnumber());
-                }
-                target.set_realdata(true);
-                //根据不同的节点位置来进行区分，如果目标所在的路径只有一个节点，则直接将目标移动过去。
-                //如果目标的路径上存在多个节点，如果在目标的运动方向上，则添加到目标的子节点，
-                //如果在运动的反向上，则删除前面的节点，使得更新的节点和前面的节点看起来方向一致
-                if(!node->mParent)
-                {
-                    //单独的目标，直接目标位置移动
-                    //节点本身就是根节点，不用计算速度角度
-                    target.set_sogms(0.0);
-                    target.set_cog(0.0);
-                    if(DEBUG_TRACK_INFO) qDebug()<<"move single node "<<node->mSerialNum<<" to including rect center. rect number:"<<target.rectnumber();
-                    node->mDefRect->CopyFrom(target);
-                    node->mUpdateTime = target.updatetime();
-                    node->mVideoIndexList.append(target.videocycleindex());
-                } else
-                {
-                    if(DEBUG_TRACK_INFO) qDebug()<<"fina a target in the path whose cog is same as the updated one. we will move up up to the parent";
-                    //计算新位置对应的目标方向
-                    QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
-                    QGeoCoordinate dest(target.center().latitude(),target.center().longitude());
-                    double cog = source.azimuthTo(dest);
-                    //目标方向是否与原来的方向相同
-                    TargetNode *startNode = 0;
-                    if(!isDirectionChange(node->mDefRect->cog(), cog))
-                    {
-                        //目标相同
-                        startNode = node;
-                        if(DEBUG_TRACK_INFO)qDebug()<<"current node cog is ok, go on";
-                    } else
-                    {
-                        if(DEBUG_TRACK_INFO)qDebug()<<"current node cog is wrong, we need to move up up";
-                        //方向反了，从上寻找可能的开始位置
-                        //这里需要排除根节点，根节点没有方向。如果遍历到了根节点，则直接将目标更新到根节点，删除原来的根节点下的子节点数据
-                        TargetNode* child = node;
-                        TargetNode* parent = node->mParent;
-                        while (parent) {
-                            if(parent->isTopNode())
-                            {
-                                if(DEBUG_TRACK_INFO)qDebug()<<"now we choose the top child for others not found in the path.";
-                                startNode = parent;
-                                //删除当前节点所在的分子
-                                break;
-                            }
-                            source.setLatitude(parent->mDefRect->center().latitude());
-                            source.setLongitude(parent->mDefRect->center().longitude());
-                            cog = source.azimuthTo(dest);
-                            if(!isDirectionChange(parent->mDefRect->cog(), cog))
-                            {
-                                startNode = parent;
-                                break;
-                            }
-                            child = parent;
-                            parent = parent->mParent;
-                        }
-                        if(startNode)
-                        {
-                            if(DEBUG_TRACK_INFO) qDebug()<<"remove child for path direction adjustment";
-                            //将原来的子节点删除
-                            startNode->removeChild(child);
-                        }
-                    }
-                    if(startNode)
-                    {
-                        //检查目标的子类节点是否已经包含了当前的矩形目标，如果包含了就不再添加了。
-                        if(!startNode->containsRect(target))
-                        {
-
-                            source.setLatitude(startNode->mDefRect->center().latitude());
-                            source.setLongitude(startNode->mDefRect->center().longitude());
-                            double distance = source.distanceTo(dest);
-                            int delta_time = target.updatetime() - startNode->mDefRect->updatetime();
-                            double sog = 0.0;
-                            if(delta_time > 0) sog = distance / delta_time;
-                            //开始平均速度和角度
-                            double refer_sog = startNode->getReferenceSog();
-                            if(refer_sog > 0.1)
-                            {
-                                sog = (sog + refer_sog) / 2.0;
-                            }
-                            target.set_cog(cog);
-                            target.set_sogms(sog);
-                            bool ok = true;
-                            if(startNode->mDefRect->sogms() > 1.0 && (sog > startNode->mDefRect->sogms() * 2.0)) ok = false;
-                            if(1)
-                            {
-                                startNode->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, startNode)));
-                                if(startNode->isTopNode() && DEBUG_TRACK_INFO) qDebug()<<"top node. node number: "<<startNode->mSerialNum<<" chiildren size:"<<startNode->mChildren.size()<<" indirectly"<<target.rectnumber();
-                                if(DEBUG_TRACK_INFO) qDebug()<<"add child node into path. node number: "<<startNode->mSerialNum<<" including rect number:"<<target.rectnumber();
-                            }
-                        }
-
-                    }
-                }
+                table.mRectList.append(def);
             }
         }
     }
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" update exist obj elaped:"<<elapsed;
-    t.start();
-
-    //将未更新的矩形作为新目标添加
-    for(int i=0; i<temp_list.size(); i++)
+    //开始统计整理，每一个节点现在有多少个待选节点,有可能存在重复的目标添加
+    foreach (AreaNodeTable table, areaTableList)
     {
-        zchxRadarRectDef rect = temp_list[i];
-        if(used_index_list.contains(rect.rectnumber())) continue;        
-        TargetNode *node = new TargetNode(rect);        
-        appendNode(node, 0);
-        if(DEBUG_TRACK_INFO)qDebug()<<"make new node from origin rect ."<<"node number:"<<node->mSerialNum<<"origin rect number:"<<rect.rectnumber();
+        foreach (TargetNode* node, table.mNodeList)
+        {
+            result[node].append(table.mRectList);
+        }
     }
+}
+
+//开始将新的可能目标更新到旧目标对应的路径
+void zchxRadarTargetTrack::UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRadarRectDefList>& counter_map, QList<int>& used_index_list)
+{
+    zchxTimeElapsedCounter counter(__FUNCTION__);
+    QMap<TargetNode*, zchxRadarRectDefList>::iterator it = counter_map.begin();
+    for(; it != counter_map.end(); it++)
+    {
+        TargetNode* node = it.key();
+        if(!node) continue;
+        zchxRadarRectDefList targetList = it.value();
+        if(targetList.size() == 0) continue;
+        quint32 now_time = targetList.first().updatetime();
+        TargetNode *topNode = node->topNode();
+        int path_size = 0;
+        if(topNode) path_size = topNode->mChildren.size();
+
+        DEBUG_TRACK_INFO <<"node: "<<node->mSerialNum<<" is about to find the corresponding rect. rect size:"<<targetList.size();
+        if(node->mParent)
+        {
+            DEBUG_TRACK_INFO <<"node: "<<node->mSerialNum<<" is a child. find the closest rect"<<" path size:"<<path_size;
+            //如果节点是目标路径上的子节点，那么候选目标就只有一个，选择距离预推运动点最近的目标
+            int    index = -1;
+            double delta_time = now_time - node->mDefRect->updatetime();
+            QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
+            //计算目标的预推位置
+            double delta_dis = node->mDefRect->sogms() * delta_time;
+            QGeoCoordinate dest = source.atDistanceAndAzimuth(delta_dis, node->mDefRect->cog());
+            int    min_dis = INT32_MAX;
+            QList<int>  index_list;
+            for(int i=0; i<targetList.size();i++)
+            {
+                zchxRadarRectDef def = targetList[i];
+                if(index_list.contains(def.rectnumber())) continue;
+                index_list.append(def.rectnumber());
+                double dis = dest.distanceTo(QGeoCoordinate(def.center().latitude(), def.center().longitude()));
+                if(dis < min_dis)
+                {
+                    min_dis = dis;
+                    index = i;
+                }
+            }
+            zchxRadarRectDef def =  targetList.takeAt(index);
+            targetList.clear();
+            targetList.append(def);
+        } else
+        {
+            //如果节点是第一个节点，那么目标的候选节点可以多个，暂且将所有点都添加到目标的候选中。
+            //这里就不进行任何其他操作
+            DEBUG_TRACK_INFO<<"node: "<<node->mSerialNum<<" is a top node. all coresspond rect appended"<<" path size:"<<path_size<<" to be added targe size:"<<targetList.size();
+        }
+
+        DEBUG_TRACK_INFO<<"update current node with rect in its prediction area";
+        //目标来源于真实的路径预推，直接更新到对应的路径
+        bool update_real_node = false;
+        foreach (zchxRadarRectDef target, targetList)
+        {
+            //将目标添加到已经使用的队列中， 防止同一个回波块出现两个目标
+            if(!used_index_list.contains(target.rectnumber()))
+            {
+                DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
+                used_index_list.append(target.rectnumber());
+            }
+
+            //目标是否已经更新过
+            if(node->containsRect(target)) continue;
+            //开始计算目标的速度等信息， 如果速度超出了最大速度等，就使用下一个目标
+            target.set_realdata(true);
+            QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
+            QGeoCoordinate dest(target.center().latitude(), target.center().longitude());
+            double delta_time = now_time - node->mDefRect->updatetime();
+            double cog = source.azimuthTo(dest);
+            double distance = source.distanceTo(dest);
+            double sog = 0.0;
+            if(delta_time > 0) sog = distance / delta_time;
+            //速度校正
+            double refer_sog = node->getReferenceSog();
+            if(refer_sog > 0.1)
+            {
+                sog = (sog + refer_sog) / 2.0;
+            }
+            //检查速度是否超出了设定的最大速度, 超过了最大速度就跳过不处理
+            if(sog > mMaxSpeed) continue;
+
+            //角度校正
+            double refer_cog = node->getReferenceCog();
+            if(refer_cog > 0) cog = (cog + refer_cog) / 2.0;
+
+            //更新到目标路径中
+            target.set_cog(cog);
+            target.set_sogms(sog);
+
+            //获取选择的目标，更新速度等
+            node->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, node)));
+            if(node->isTopNode())
+            {
+                DEBUG_TRACK_INFO <<"top node. node number: "<<node->mSerialNum<<" children size:"<<node->mChildren.size()<<" directly child"<<target.rectnumber();
+            } else{
+                DEBUG_TRACK_INFO <<"add child node into path. node number: "<<node->mSerialNum<<" rect number:"<<target.rectnumber();
+            }
+            update_real_node = true;
+        }
+        if(!update_real_node)
+        {
+            DEBUG_TRACK_INFO <<"abnormal found now. node not updated from its pridiction area node."<<node->mSerialNum;
+        }
+    }
+}
+
+
+void zchxRadarTargetTrack::UpdateNodeWithExistVideoRect(QList<TargetNode*> list, QList<int>& used_index_list, const zchxRadarRectDefList& temp_list)
+{
+    zchxTimeElapsedCounter counter(__FUNCTION__);
+    foreach(TargetNode* node, list)
+    {
+        if(!node) continue;
+        zchxRadarRectDefList targetList;
+        //预推区域内没有找到目标图形，现在看看是否在一个回波图形上
+        DEBUG_TRACK_INFO <<"node "<<node->mSerialNum<<" has no selected rect. now check whether it is in an exist rect.";
+        //检查当前目标是否落在了某一个回波图形上
+        for(int i=0; i<temp_list.size(); i++)
+        {
+            zchxRadarRectDef rect = temp_list[i];
+            if(used_index_list.contains(rect.rectnumber())) continue;
+            if(isRectAreaContainsPoint(rect, node->mDefRect->center().latitude(), node->mDefRect->center().longitude()))
+            {
+                DEBUG_TRACK_INFO <<"find node in rect. node_number:"<<node->mSerialNum<<" origin rect number:"<<rect.rectnumber();
+                targetList.append(rect);
+                break;
+            }
+        }
+        if(targetList.size() == 0) continue;
+
+        DEBUG_TRACK_INFO <<"update current node with rect for node is rect area...this wanna not see. ";
+        //目标节点本身没有更新，只是他现在处在一个回波图形上，如果他不更新，则有可能同一个回波图形在不同的位置出现了多个目标，
+        //为了避免这种情况,我们还是假定目标移动到了回波图形的中心。
+        zchxRadarRectDef target = targetList.first();
+        if(!used_index_list.contains(target.rectnumber()))
+        {
+            DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
+            used_index_list.append(target.rectnumber());
+        }
+        target.set_realdata(true);
+        //根据不同的节点位置来进行区分，如果目标所在的路径只有一个节点，则直接将目标移动过去。
+        //如果目标的路径上存在多个节点，如果在目标的运动方向上，则添加到目标的子节点，
+        //如果在运动的反向上，则删除前面的节点，使得更新的节点和前面的节点看起来方向一致
+        if(!node->mParent)
+        {
+            //单独的目标，直接目标位置移动
+            //节点本身就是根节点，不用计算速度角度
+            target.set_sogms(0.0);
+            target.set_cog(0.0);
+            DEBUG_TRACK_INFO<<"move single node "<<node->mSerialNum<<" to including rect center. rect number:"<<target.rectnumber();
+            node->mDefRect->CopyFrom(target);
+            node->mUpdateTime = target.updatetime();
+            node->mVideoIndexList.append(target.videocycleindex());
+            continue;
+        }
+
+        DEBUG_TRACK_INFO<<"fina a target in the path whose cog is same as the updated one. we will move up up to the parent";
+        //计算新位置对应的目标方向
+        QGeoCoordinate source(node->mDefRect->center().latitude(), node->mDefRect->center().longitude());
+        QGeoCoordinate dest(target.center().latitude(),target.center().longitude());
+        double cog = source.azimuthTo(dest);
+        //目标方向是否与原来的方向相同
+        TargetNode *startNode = 0;
+        if(!isDirectionChange(node->mDefRect->cog(), cog))
+        {
+            //目标相同
+            startNode = node;
+            DEBUG_TRACK_INFO<<"current node cog is ok, go on";
+        } else
+        {
+            DEBUG_TRACK_INFO<<"current node cog is wrong, we need to move up up";
+            //方向反了，从上寻找可能的开始位置
+            //这里需要排除根节点，根节点没有方向。如果遍历到了根节点，则直接将目标更新到根节点，删除原来的根节点下的子节点数据
+            TargetNode* child = node;
+            TargetNode* parent = node->mParent;
+            while (parent) {
+                if(parent->isTopNode())
+                {
+                    DEBUG_TRACK_INFO <<"now we choose the top child for others not found in the path.";
+                    startNode = parent;
+                    //删除当前节点所在的分子
+                    break;
+                }
+                source.setLatitude(parent->mDefRect->center().latitude());
+                source.setLongitude(parent->mDefRect->center().longitude());
+                cog = source.azimuthTo(dest);
+                if(!isDirectionChange(parent->mDefRect->cog(), cog))
+                {
+                    startNode = parent;
+                    break;
+                }
+                child = parent;
+                parent = parent->mParent;
+            }
+            if(startNode)
+            {
+                DEBUG_TRACK_INFO <<"remove child for path direction adjustment";
+                //将原来的子节点删除
+                startNode->removeChild(child);
+            }
+        }
+        if(!startNode) continue;
+        //检查目标的子类节点是否已经包含了当前的矩形目标，如果包含了就不再添加了。
+        if(startNode->containsRect(target)) continue;
+        source.setLatitude(startNode->mDefRect->center().latitude());
+        source.setLongitude(startNode->mDefRect->center().longitude());
+        double distance = source.distanceTo(dest);
+        int delta_time = target.updatetime() - startNode->mDefRect->updatetime();
+        double sog = 0.0;
+        if(delta_time > 0) sog = distance / delta_time;
+        //速度校正
+        double refer_sog = node->getReferenceSog();
+        if(refer_sog > 0.1)
+        {
+            sog = (sog + refer_sog) / 2.0;
+        }
+        //检查速度是否超出了设定的最大速度, 超过了最大速度就跳过不处理
+        if(sog > mMaxSpeed) continue;
+        //角度校正
+        double refer_cog = node->getReferenceCog();
+        if(refer_cog > 0) cog = (cog + refer_cog) / 2.0;
+
+        //更新到目标路径中
+        target.set_cog(cog);
+        target.set_sogms(sog);
+        startNode->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, startNode)));
+
+    }
+}
+
+void zchxRadarTargetTrack::determineTargetStatus()
+{
+    zchxTimeElapsedCounter counter(__FUNCTION__);
 
     //开始检查已经存在的目标的更新状态（静止，运动，还是不能确定），如果路径节点数大于N，则目标确认输出。目标位置变化不大，就是静止，否则就是运动
     QList<int> exist_numbers = mTargetNodeMap.keys();
@@ -586,7 +486,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
             NodeStatus sts = checkRoutePathSts(new_path_list, list);
             if(sts == Node_Moving)
             {
-                if(DEBUG_TRACK_INFO) qDebug()<<"find obj moveing:"<<node->mSerialNum;
+                DEBUG_TRACK_INFO <<"find obj moveing:"<<node->mSerialNum;
                 move_child_node = node->mChildren[i].data();
                 node->mStatus = sts;
             } else if(sts == Node_GAP_ABNORMAL)
@@ -662,10 +562,11 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
         }
     }
 
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" update obj status elaped:"<<elapsed;
-    t.start();
+}
 
+void zchxRadarTargetTrack::targetRecheck(int term)
+{
+    zchxTimeElapsedCounter counter(__FUNCTION__);
     //这里对目标进行总的遍历处理
     //1)将目标的时间更新到目标的最后节点的时间
     //2)获取目标对应的回波周期序列，确定静止目标是不是虚警。
@@ -683,7 +584,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
         //更新时间
         if(node->mUpdateTime < child_time) node->mUpdateTime = child_time;
         //虚警判断
-        node->mFalseAlarm = node->isFalseAlarm(cur_cycle_index);
+        node->mFalseAlarm = node->isFalseAlarm(term);
         //寻找重复目标（速度和方向都相同）
         QList<TargetNode*> children = node->getAllBranchLastChild();
         if(children.size() > 1)
@@ -727,63 +628,106 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarTrackTask &ta
     foreach (int key, deleteNodeList) {
         mTargetNodeMap.remove(key);
     }
+}
 
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<metaObject()->className()<<__FUNCTION__<<" check same status and merge elaped:"<<elapsed;
-    t.start();
-
-    //检查是否要对当次没有更新的目标进行预推更新
-    if(mSettings.prediction_enabled)
+void zchxRadarTargetTrack::PredictionMoveNode(int cur_cycle_index, quint32 now)
+{
+    if(!mSettings.user_video_parse.prediction_enabled) return;
+    foreach (QSharedPointer<TargetNode> node, mTargetNodeMap)
     {
-        int i= 1;
-        foreach (QSharedPointer<TargetNode> node, mTargetNodeMap)
+        //            qDebug()<<"start check make prediction"<<i++;
+        //只对运动目标进行预推
+        if(!node || !node->isNodeMoving()) continue;
+        QList<uint> list = node->getVideoIndexList();
+        if(list.size() == 0) continue;
+        if(cur_cycle_index == list.last())
         {
-//            qDebug()<<"start check make prediction"<<i++;
-            //只对运动目标进行预推
-            if(!node || !node->isNodeMoving()) continue;
-            QList<uint> list = node->getVideoIndexList();
-            if(list.size() == 0) continue;
-            if(cur_cycle_index == list.last())
-            {
-                //目标本次进行了更新，则清楚目标原来的预推参数信息
-                node->clearPrediction();
-                continue;
-            }
-            //目标本次没有更新，需要进行检查本次是否需要预推
-            uint baseIndex = list.last();
-            if(node->mPredictionTimes > 0)
-            {
-                baseIndex = node->mPredictionIndex;
-            }
-
-            if(cur_cycle_index - baseIndex  < mTargetPredictionInterval) continue;
-            //开始执行目标预推
-            QTime test;
-            test.start();
-//            qDebug()<<"start make prediction";
-            node->makePrediction(cur_cycle_index, task.first().updatetime());
-//            qDebug()<<"make prediction end:"<<test.elapsed();
+            //目标本次进行了更新，则清楚目标原来的预推参数信息
+            node->clearPrediction();
+            continue;
         }
+        //目标本次没有更新，需要进行检查本次是否需要预推
+        uint baseIndex = list.last();
+        if(node->mPredictionTimes > 0)
+        {
+            baseIndex = node->mPredictionIndex;
+        }
+
+        if(cur_cycle_index - baseIndex  < mTargetPredictionInterval) continue;
+        node->makePrediction(cur_cycle_index, now);
+    }
+}
+
+void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &task)
+{
+    zchxTimeElapsedCounter counter(__FUNCTION__);
+
+    if(task.size() == 0) return;
+    int cur_cycle_index = task.first().videocycleindex();
+    zchxRadarRectDefList temp_list(task);             //保存的未经处理的所有矩形单元
+    quint32 now_time = task.first().updatetime();
+    DEBUG_TRACK_INFO <<"now process list time:"<<QDateTime::fromTime_t(task.first().updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
+
+    //从第二个扫描周期开始才开始进行目标预推，这里的扫描周期就是两个周期的数据的差值
+    QList<AreaNodeTable> areaTableList;
+    if(mLastVideoDataTime != 0)
+    {
+        double scan_time = now_time - mLastVideoDataTime;
+        areaTableList = calculateTargetTrackMode(mMaxSpeed, task.first().updatetime(), scan_time);
+    }
+    mLastVideoDataTime = now_time;
+
+    QList<int>  used_index_list;        //标记已经更新过的目标块
+
+    //更新预推节点可能下一个目标的位置
+    QMap<TargetNode*, zchxRadarRectDefList> counter_map;
+    CounterPossibleChildRect(areaTableList, counter_map, temp_list );
+
+    //将末端节点进行分类，有预推节点的进行处理，没有预推节点的检查是否在现在的回波图形上
+    QList<TargetNode*> no_prediction_nodes;
+    QMap<TargetNode*, zchxRadarRectDefList>::iterator it = counter_map.begin();
+    for(; it != counter_map.end(); it++)
+    {
+        TargetNode* node = it.key();
+        if(!node) continue;
+        zchxRadarRectDefList targetList = it.value();
+        if(targetList.size() == 0) no_prediction_nodes.append(node);
+    }
+    //将下一个目标的位置更新到预推节点
+    UpdateNodeWithPossibleTarget(counter_map, used_index_list);
+    //检查是否在已经存在的回波图形上
+    UpdateNodeWithExistVideoRect(no_prediction_nodes, used_index_list, temp_list);
+
+    //将未更新的矩形作为新目标添加
+    for(int i=0; i<temp_list.size(); i++)
+    {
+        zchxRadarRectDef rect = temp_list[i];
+        if(used_index_list.contains(rect.rectnumber())) continue;        
+        TargetNode *node = new TargetNode(rect);        
+        appendNode(node, 0);
+        DEBUG_TRACK_INFO <<"make new node from origin rect ."<<"node number:"<<node->mSerialNum<<"origin rect number:"<<rect.rectnumber();
     }
 
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<"exe obj prediction elaped:"<<elapsed <<mSettings.prediction_enabled<<mSettings.check_target_gap;
-    t.start();
+    //开始确定目标的运动状态
+    determineTargetStatus();;
+
+    //目标进行检查，删除回波图形多个目标  运动状态相同的目标
+    targetRecheck(cur_cycle_index);
+
+
+    //检查是否要对当次没有更新的目标进行预推更新
+    PredictionMoveNode(cur_cycle_index, now_time);
 
     //删除很久没有更新的目标点
     deleteExpiredNode();
     //现在将目标进行输出
     outputTargets();
-
-    elapsed = t.elapsed();
-    if(track_debug) qDebug()<<" out put elaped:"<<elapsed;
-    t.start();
 }
 
 NodeStatus zchxRadarTargetTrack::checkRoutePathSts(QList<TargetNode*>& newRoueNodeList, const QList<TargetNode*>& path)
 {
     //只有一个节点不能确定状态
-    if(path.size() < mSettings.confirm_target_cnt) return Node_UnDef;
+    if(path.size() < mSettings.user_video_parse.confirm_target_cnt) return Node_UnDef;
     //检查对应的目标是否是方向统一
     QList<int> dir_change_index_list;
     for(int i=2; i<path.size(); i++)
@@ -800,7 +744,7 @@ NodeStatus zchxRadarTargetTrack::checkRoutePathSts(QList<TargetNode*>& newRoueNo
         //这里再检查每一段路径的长度是否符合要求。每一段路径的长度是否都差不多。如果差异较大，就从差异较大的节点开始抽出节点重新组成一个新的目标
         double pre_distance = -1.0;
         bool abnormal = false;
-        if(mSettings.check_target_gap)
+        if(mSettings.user_video_parse.check_target_gap)
         {
             for(int i=2; i<path.size(); i++)
             {
@@ -835,12 +779,9 @@ NodeStatus zchxRadarTargetTrack::checkRoutePathSts(QList<TargetNode*>& newRoueNo
 
 QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_speed, quint32 now, double scan_time)
 {
+    zchxTimeElapsedCounter counter(__FUNCTION__);
     QList<AreaNodeTable> areaNodeTableList;
     if(mTargetNodeMap.size() == 0) return areaNodeTableList;
-
-    QTime t;
-    t.start();
-    qDebug()<<"start calculate node's prediction area. and now current node size:"<<mTargetNodeMap.size();
 
     //通过计算目标的预推区域来计算区域是否存在相交，追越， 平行相遇等模型
     QList<PredictionNode> result_list;
@@ -879,7 +820,7 @@ QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_s
                 QGeoCoordinate est_geo = QGeoCoordinate(old_lat, old_lon).atDistanceAndAzimuth(distance, old_cog);
                 double est_lat = est_geo.latitude();
                 double est_lon = est_geo.longitude();
-                prediction = new zchxTargetPrediction(old_lat, old_lon, est_lat, est_lon, mSettings.prediction_width, 0.2);
+                prediction = new zchxTargetPrediction(old_lat, old_lon, est_lat, est_lon, mSettings.user_video_parse.prediction_width, 0.2);
             }
             if(prediction && prediction->isValid())
             {
@@ -902,7 +843,7 @@ QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_s
         if(length == 0)
         {
             //节点没有更新预推区域，这是异常情况
-            if(DEBUG_TRACK_INFO) qDebug()<<"node:"<<top_node->mSerialNum<<" has no prediction area. abnormal occoured...";
+            DEBUG_TRACK_INFO <<"node:"<<top_node->mSerialNum<<" has no prediction area. abnormal occoured...";
         }
     }
     //开始计算目标预推区域和节点的对应关系
@@ -994,34 +935,17 @@ QList<AreaNodeTable> zchxRadarTargetTrack::calculateTargetTrackMode(double max_s
         }
     }
 
-    qDebug()<<"end calculate node's prediction area with table size:"<<areaNodeTableList.size()<<" time:"<<t.elapsed();
-
-    if(DEBUG_TRACK_INFO)
-    {
-        //打印预推区域和节点
-        qDebug()<<"start printf prediction area related node;";
-        for(int i=0; i<areaNodeTableList.size(); i++)
-        {
-            AreaNodeTable table = areaNodeTableList[i];
-            QStringList node_number_list;
-            foreach (TargetNode* node, table.mNodeList) {
-                node_number_list.append(QString::number(node->mSerialNum));
-            }
-            qDebug()<<"prediction["<<i+1<<"] type"<<table.mType<<" has node list:"<<node_number_list.join(" ");
-        }
-    }
     return areaNodeTableList;
 }
 
 void zchxRadarTargetTrack::splitAllRoutesIntoTargets(TargetNode *node, TargetNode *routeNode)
 {
-    if(DEBUG_TRACK_INFO) zchxTimeElapsedCounter counter(__FUNCTION__);
+    zchxTimeElapsedCounter counter(__FUNCTION__);
     if(!node || !routeNode) return;
     //目标确认,将路径进行分离,确认的路径保留,未确认的路径移除并作为单独的目标再次加入,等待下一个周期到来时进行继续更新
     for(int i=0; i<node->mChildren.size();)
     {
         //取得路径的第一个节点
-        if(DEBUG_TRACK_INFO)    qDebug()<<"i = "<<i<<node->mChildren.size();
         TargetNode *child_lvl1 = node->mChildren[i].data();
         if(!child_lvl1) continue;
         if(child_lvl1 == routeNode)
@@ -1055,9 +979,9 @@ void zchxRadarTargetTrack::deleteExpiredNode()
         if(!node) continue;
         quint32 node_time = node->mUpdateTime;
         quint32 delta_time = time_of_day - node_time;
-        if(delta_time >= mSettings.clear_target_time)
+        if(delta_time >= mSettings.user_video_parse.clear_target_time)
         {
-            if(DEBUG_TRACK_INFO) qDebug()<<"remove node:"<<node.data()->mSerialNum<<"now:"<<time_of_day<<" node time:"<<node_time<<" delta_time:"<<delta_time<<" clear time:"<<mSettings.clear_target_time;
+            DEBUG_TRACK_INFO <<"remove node:"<<node.data()->mSerialNum<<"now:"<<time_of_day<<" node time:"<<node_time<<" delta_time:"<<delta_time<<" clear time:"<<mSettings.user_video_parse.clear_target_time;
             mTargetNodeMap.remove(key);
             continue;
         }
@@ -1077,11 +1001,11 @@ void zchxRadarTargetTrack::updateTrackPointWithNode(zchxRadarSurfaceTrack& list,
     if(node->isNodeSilent())
     {
         if(node->mFalseAlarm) return;
-        if(!mSettings.output_point) return;
+        if(!mSettings.user_video_parse.output_point) return;
         if(silent_num) *silent_num = (*silent_num) + 1;
     } else if(node->isNodeMoving())
     {
-        if(child->mDefRect->sogms() < mSettings.output_target_min_speed) return;
+        if(child->mDefRect->sogms() < mSettings.user_video_parse.output_target_min_speed) return;
     } else
     {
         //目标状态未确定
@@ -1096,14 +1020,32 @@ void zchxRadarTargetTrack::updateTrackPointWithNode(zchxRadarSurfaceTrack& list,
 
     //编号
     trackObj->set_radarsiteid(QString("%1_%2").arg(mSettings.radar_id).arg(mSettings.channel_id).toUtf8().data());
-    trackObj->set_tracknumber(node_number);
-    trackObj->set_trackconfirmed(node->mStatus == Node_Moving? true : false);
+    trackObj->set_tracknumber(node_number);    
     trackObj->set_objtype(1);
     //当前目标
     trackObj->mutable_current()->CopyFrom(*target);
-    trackObj->mutable_current()->set_sogknot(target->sogms() * 3.6 / 1.852);  //输出的速度为节
-    //历史轨迹输出
+    bool is_move_obj = false;
     if(node->isNodeMoving())
+    {
+        //检查历史轨迹上的点的距离是否超出了目标当前的大小
+        TargetNode *top = node->topNode();
+        if(top)
+        {
+            zchxRadarRectDef* top_rect = top->mDefRect;
+            if(top_rect && target)
+            {
+                double target_size = target->mutable_boundrect()->diameter();
+                double dis = getDisDeg(top_rect->center().latitude(), top_rect->center().latitude(),
+                                       target->center().latitude(), target->center().longitude());
+                if(target_size <= dis)
+                {
+                    is_move_obj = true;
+                }
+            }
+        }
+    }
+
+    if(is_move_obj)
     {
         //历史轨迹数据按照时间顺序进行输出，时间越早则靠后。top节点在最后面
         TargetNode* cur = node->getLastChild();
@@ -1112,7 +1054,14 @@ void zchxRadarTargetTrack::updateTrackPointWithNode(zchxRadarSurfaceTrack& list,
             history->CopyFrom(*(cur->mDefRect));
             cur = cur->mParent;
         }
+        trackObj->mutable_current()->set_sogknot(target->sogms() * 3.6 / 1.852);  //输出的速度为节
+    } else
+    {
+        trackObj->mutable_current()->set_sogknot(0.0);  //输出的速度为节
+        trackObj->mutable_current()->set_sogms(0.0);
+        trackObj->mutable_current()->set_cog(0.0);
     }
+    trackObj->set_trackconfirmed(is_move_obj? true : false);
 }
 
 void zchxRadarTargetTrack::updateRectMapWithNode(zchxRadarRectMap &map, TargetNode *node)
@@ -1258,13 +1207,13 @@ void zchxRadarTargetTrack::appendNode(TargetNode *node, int source)
     node->clearPrediction();
     if(source == 0)
     {
-        if(DEBUG_TRACK_INFO)qDebug()<<"make new now from orignal rect:"<<node<<node->mDefRect->rectnumber()<<node->mSerialNum;
+        DEBUG_TRACK_INFO<<"make new now from orignal rect:"<<node<<node->mDefRect->rectnumber()<<node->mSerialNum;
     } else
     {
-        if(DEBUG_TRACK_INFO)qDebug()<<"make new now from old ununsed route rect:"<<node<<node->mDefRect->rectnumber()<<node->mSerialNum;
+        DEBUG_TRACK_INFO<<"make new now from old ununsed route rect:"<<node<<node->mDefRect->rectnumber()<<node->mSerialNum;
     }
     mTargetNodeMap.insert(node->mSerialNum, QSharedPointer<TargetNode>(node));
-    if(track_debug) qDebug()<<"new node maked now:"<<node->mSerialNum<<node->mUpdateTime;
+    DEBUG_TRACK_INFO<<"new node maked now:"<<node->mSerialNum<<node->mUpdateTime;
 }
 
 int zchxRadarTargetTrack::getCurrentNodeNum()
@@ -1287,7 +1236,7 @@ int zchxRadarTargetTrack::getCurrentNodeNum()
     return mRectNum;
 }
 
-void zchxRadarTargetTrack::process(const zchxRadarTrackTask &task)
+void zchxRadarTargetTrack::process(const zchxRadarRectDefList &task)
 {
     zchxTimeElapsedCounter counter(QString(metaObject()->className()) + " : " + QString(__FUNCTION__));
     processWithPossibleRoute(task);
@@ -1296,7 +1245,7 @@ void zchxRadarTargetTrack::process(const zchxRadarTrackTask &task)
 
 void zchxRadarTargetTrack::dumpTargetDistance(const QString &tag, double merge_dis)
 {
-    if(track_debug) qDebug()<<"dump target distance now:"<<tag;
+    DEBUG_TRACK_INFO<<"dump target distance now:"<<tag;
     QList<int> keys = mRadarRectMap.keys();
     for(int i=0; i<keys.size(); i++)
     {
@@ -1311,7 +1260,7 @@ void zchxRadarTargetTrack::dumpTargetDistance(const QString &tag, double merge_d
             double distance = getDisDeg(cur_lat, cur_lon, next_lat, next_lon);
             if(distance < merge_dis)
             {
-                if(track_debug) qDebug()<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" time:"<<cur.current_rect().updatetime()<<next.current_rect().updatetime();
+                DEBUG_TRACK_INFO<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" time:"<<cur.current_rect().updatetime()<<next.current_rect().updatetime();
             }
         }
     }
@@ -1337,7 +1286,7 @@ void zchxRadarTargetTrack::checkTargetRectAfterUpdate(double merge_dis)
             {
                 if(cur.dir_confirmed() ^ next.dir_confirmed())
                 {
-                    if(track_debug) qDebug()<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" confirmed:"<<cur.dir_confirmed()<<next.dir_confirmed()<<" remove not confirmed one.";
+                    DEBUG_TRACK_INFO<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" confirmed:"<<cur.dir_confirmed()<<next.dir_confirmed()<<" remove not confirmed one.";
 
                     if(cur.dir_confirmed() && !next.dir_confirmed())
                     {
@@ -1351,7 +1300,7 @@ void zchxRadarTargetTrack::checkTargetRectAfterUpdate(double merge_dis)
                     }
                 } else
                 {
-                    if(track_debug) qDebug()<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" time:"<<cur.current_rect().updatetime()<<next.current_rect().updatetime()<<" remove old one.";
+                    DEBUG_TRACK_INFO<<"found abormal targets:"<<keys[i]<<keys[k]<<"  distance:"<<distance<<" time:"<<cur.current_rect().updatetime()<<next.current_rect().updatetime()<<" remove old one.";
 
                     if(next.current_rect().updatetime() <= cur.current_rect().updatetime())
                     {
@@ -1386,3 +1335,4 @@ void zchxRadarTargetTrack::updateParseSetting(const zchxVideoParserSettings &set
     mSettings = setting;
 //    mTargetNodeMap.clear();
 }
+

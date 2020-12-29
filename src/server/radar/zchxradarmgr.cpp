@@ -96,7 +96,9 @@ void zchxRadarMgr::updateDeviceList(const zchxCommon::zchxRadarDeviceList &list)
         } else
         {
             //新添加的设备
-            mDevMgr[newdev.base.id] = QSharedPointer<ZCHXRadarDevice>(new ZCHXRadarDevice(newdev, mFilterEnabled, mFilterMgr->getFilterAreaList()));
+            QSharedPointer<ZCHXRadarDevice> dev(new ZCHXRadarDevice(newdev, mFilterEnabled, mFilterMgr->getFilterAreaList()));
+            mDevMgr.insert(newdev.base.id, dev);
+            connect(dev.data(), SIGNAL(signalSendHeadChangedData(int,int,int)), this, SIGNAL(signalSendHeadChangedData(int,int,int)));
         }
     }
 

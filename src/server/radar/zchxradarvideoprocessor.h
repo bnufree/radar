@@ -12,10 +12,8 @@
 #include "zchxradarcommon.h"
 #include "zchxdatadef.h"
 
+typedef zchxRadarVideoSourceDataList      ZCHXRadarVideoProcessorData;
 class zchxRadarRectExtraction;
-class zchxRadarTargetTrack;
-
-typedef zchxRadarVideoTaskList      ZCHXRadarVideoProcessorData;
 
 class ZCHXRadarVideoProcessor : public QThread
 {
@@ -23,18 +21,16 @@ class ZCHXRadarVideoProcessor : public QThread
 public:
     explicit ZCHXRadarVideoProcessor(const zchxVideoParserSettings& setting, QObject *parent = 0);
     ~ZCHXRadarVideoProcessor();
-    void appendSrcData(const zchxRadarVideoTask& task);
+    void appendSrcData(const zchxRadarVideoSourceData& task);
     bool getProcessData(ZCHXRadarVideoProcessorData& task);
-    void setTracker(zchxRadarTargetTrack* track) {mTracker = track;}
     void setOver(bool sts) {mIsover = sts;}
-    void updateParseSetting(const zchxVideoParserSettings& setting);
 
 protected:
     void run();
 
 
 signals:
-    void signalSendRects(const zchxRadarRectDefList& list);
+    void signalSendParsedVideoData(const zchxRadarRectDefList& list);
     void signalSendVideoPixmap(const QImage& img);
 
 public slots: 
@@ -45,15 +41,14 @@ private:
     bool    mergeVideoOfMultiTerms(QMap<int,RADAR_VIDEO_DATA>& result, const ZCHXRadarVideoProcessorData& task);
     bool    drawOriginalVideoImage(QPaintDevice* result, const QMap<int,RADAR_VIDEO_DATA>& video);
 private:
-    QColor                          m_objColor1;
-    QColor                          m_objColor2;
-    zchxRadarRectExtraction*        mVideoExtractionWorker;
-    bool                            mOutputImg;
-    QList<ZCHXRadarVideoProcessorData>          mTaskList;
-    QMutex                          mMutex;
-    zchxRadarTargetTrack            *mTracker;
-    zchxVideoParserSettings         mParse;
-    bool                            mIsover;
+    QColor                              m_objColor1;
+    QColor                              m_objColor2;
+    bool                                mOutputImg;
+    zchxRadarVideoSourceDataList        mTaskList;
+    QMutex                              mMutex;
+    zchxVideoParserSettings             mParse;
+    bool                                mIsover;
+    zchxRadarRectExtraction*            mTargetExt;
 };
 
 #endif // ZCHXRADARVIDEOPROCESSOR_H

@@ -51,7 +51,7 @@ RADAR_VIDEO_DATA::RADAR_VIDEO_DATA()
     m_uMsgIndex = 0;
     m_uLineNum = 0;
     m_uAzimuth = 0;
-    m_uHeading = 0;
+//    m_uHeading = 0;
     m_dStartRange = 0;
     m_dRangeFactor = 0;
     m_bitResolution = RES::MONOBIT_RESOLUTION;

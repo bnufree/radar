@@ -22,6 +22,7 @@ public:
     void updateSocketStatus(const zchxCommon::zchxPortStatus& status);
 public slots:
     void updateDevRecvIP(const QString& ip, int id);
+    void updateChannelHeadData(int radar, int channel, int head);
 private:
     void updateBaseSetting(zchxCommon::zchxRadarDeviceBaseSetting& base);
     void updateChannelSetting(zchxCommon::zchxRadarDevice& dev);

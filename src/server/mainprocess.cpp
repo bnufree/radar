@@ -69,6 +69,7 @@ bool MainProcess::start()
     connect(mCfgMgr, SIGNAL(signalNewRadarSettings(zchxCommon::zchxRadarDeviceList)),
             mDevMgr, SLOT(updateDeviceList(zchxCommon::zchxRadarDeviceList)));
     connect(mDevMgr, SIGNAL(signalSendRecvIP(QString,int)),  mCfgMgr, SLOT(updateDevRecvIP(QString,int)));
+    connect(mDevMgr, SIGNAL(signalSendHeadChangedData(int,int,int)), mCfgMgr, SLOT(updateChannelHeadData(int,int,int)));
     emit mCfgMgr->signalNewRadarSettings(mCfgMgr->getDevList());
     return true;
 }

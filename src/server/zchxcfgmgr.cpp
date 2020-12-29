@@ -172,6 +172,19 @@ void zchxCfgMgr::updateDevRecvIP(const QString& ip, int id)
     save();
 }
 
+void zchxCfgMgr::updateChannelHeadData(int radar, int channel, int head)
+{
+    for(int i=0; i<mCfg->device_list.size(); i++)
+    {
+        if(mCfg->device_list[i].base.id == radar)
+        {
+            mCfg->device_list[i].parse_param.head = head;
+            break;
+        }
+    }
+    save();
+}
+
 void zchxCfgMgr::updateCfg(int cmd, const QJsonValue& val)
 {
     if(!mCfg) return;

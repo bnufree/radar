@@ -19,6 +19,7 @@ public slots:
     void     setControl(const zchxCommon::zchxRadarCtrlDef& def);
 signals:
     void    signalSendRecvIP(const QString& ip, int id);
+    void    signalSendHeadChangedData(int radar, int channel, int head);
 public slots:
     void     slotSendFilterAreaData();
 private:

@@ -246,12 +246,15 @@ public:
     bool            check_target_gap;
     bool            output_point;
     double          output_target_min_speed;
+    int             head;
+    bool            use_original_video_img;
 
 public:
     zchxVideoParse();
     zchxVideoParse(const QJsonObject& obj);
     zchxVideoParse(const QJsonArray& array) : zchxData(array) {}
     QJsonValue toJson() const;
+    bool operator ==(const zchxVideoParse& other) const;
 };
 
 

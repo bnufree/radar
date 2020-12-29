@@ -90,17 +90,6 @@ void zchxRadarVideoParser::InitializeLookupData()
           lookupData[LOOKUP_SPOKE_HIGH_APPROACHING][j] = high;
       }
     }
-
-//    {
-//        for(int i=0; i<6; i++)
-//        {
-//            QList<uint8_t> data;
-//            for (int j = 0; j <= UINT8_MAX; j++) {
-//                data.append(lookupData[i][j]);
-//            }
-//            qDebug()<<"lookupData["<<i<<"]:"<<data;
-//        }
-//    }
   }
 }
 
@@ -125,26 +114,18 @@ zchxRadarVideoParser::zchxRadarVideoParser(zchxRadarOutputDataMgr* mgr, const zc
 
     InitializeLookupData();
     //回波块解析
-    bool process_sync = true;
     mVideoProcessor =  new ZCHXRadarVideoProcessor(parse);
-    mTrackProcessor = new zchxRadarTargetTrack(parse, this);
+    mTargetTrackProcessor = new zchxRadarTargetTrack(parse);
 
-    connect(mVideoProcessor,SIGNAL(signalSendVideoPixmap(QImage)), this,SLOT(slotSendVideoImage(QImage)));
+    connect(mVideoProcessor,SIGNAL(signalSendVideoPixmap(QImage)), this, SLOT(slotSendVideoImage(QImage)));
+    connect(mVideoProcessor, SIGNAL(signalSendParsedVideoData(zchxRadarRectDefList)),
+            mTargetTrackProcessor, SLOT(appendTrackTask(zchxRadarRectDefList)));
+
     //处理矩形回波块    
-    connect(mTrackProcessor, SIGNAL(signalSendTracks(zchxRadarSurfaceTrack)),
+    connect(mTargetTrackProcessor, SIGNAL(signalSendTracks(zchxRadarSurfaceTrack)),
             this, SLOT(slotSendTracks(zchxRadarSurfaceTrack)));
-    connect(mTrackProcessor, SIGNAL(signalSendRectData(zchxRadarRectMap)),
-            this, SLOT(slotSendRectList(zchxRadarRectMap)));
-    connect(mTrackProcessor, SIGNAL(signalSendRoutePath(zchxRadarRouteNodes)),
-            this, SLOT(slotSendRadarNodeRoute(zchxRadarRouteNodes)));
     mVideoProcessor->start();
-#ifndef TRACK_THREAD
-    mVideoProcessor->setTracker(mTrackProcessor);
-#else
-    connect(mVideoProcessor,SIGNAL(signalSendRects(zchxRadarRectDefList)),
-            mTrackProcessor,SLOT(appendTask(zchxRadarRectDefList)));
-    mTrackProcessor->start();
-#endif
+    mTargetTrackProcessor->start();
 
     if(!parent)
     {
@@ -168,15 +149,14 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
         delete mVideoProcessor;
         mVideoProcessor = NULL;
     }
-    if(mTrackProcessor)
+    if(mTargetTrackProcessor)
     {
-
-        qDebug()<<"now wait for TrackProcessor delete...";
-        mTrackProcessor->deleteLater();
-        mTrackProcessor = 0;
-//        delete mTrackProcessor;
-//        mTrackProcessor = 0;
-        qDebug()<<"now end TrackProcessor delete...";
+        mTargetTrackProcessor->setOver(true);
+        mTargetTrackProcessor->terminate();
+        mTargetTrackProcessor->wait();
+        qDebug()<<"start delete ...";
+        delete mTargetTrackProcessor;
+        mTargetTrackProcessor = NULL;
     }
     qDebug()<<"stop parse thread...";
     if(mWorkThread)
@@ -214,6 +194,8 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         return;
     }
 
+//    qDebug()<<"parse setting,(cell, line):"<<mParseParam.cell_num<<mParseParam.line_num;
+
     QList<int> lineData;
     double range_factor;
     for (int scanline = 0; scanline < scanlines_in_packet; scanline++) {
@@ -244,7 +226,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         double range_meters = 0;
 
         heading_raw = (line->common.heading[1] << 8) | line->common.heading[0];
-        if(mParseParam.use_video_radius)
+        if(mParseParam.user_video_parse.use_video_radius)
         {
             switch (mRadarType) {
             case zchxCommon::RADAR_BR24:
@@ -330,7 +312,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
                 }
                 else
                 {
-                    range_meters = mParseParam.manual_radius;
+                    range_meters = mParseParam.user_video_parse.manual_radius;
                 }
             }
         }
@@ -389,7 +371,6 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
             mStartAzimuth = -1;
             mTermSpokeCount = 0;
         }
-
         //cout<<"angle_raw"<<angle_raw;
         RADAR_VIDEO_DATA objVideoData;
 //        objVideoData.m_uSourceID = m_uSourceID; //1 接入雷达编号
@@ -403,7 +384,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         objVideoData.m_dCentreLon = mParseParam.center_lon; //中心经度
         objVideoData.m_dCentreLat = mParseParam.center_lon; //中心纬度
         objVideoData.m_uLineNum = mParseParam.line_num; //1_总共线的个数
-        objVideoData.m_uHeading = mParseParam.head;//雷达方位
+//        objVideoData.m_uHeading = mParseParam.head;//雷达方位
         objVideoData.mLineData = lineData;
         objVideoData.m_time = QDateTime::currentMSecsSinceEpoch();
         //半径
@@ -488,14 +469,13 @@ void zchxRadarVideoParser::processVideoData(bool rotate)
     if(mVideoProcessor == 0) return;
     if (mRadarVideoMap1T.isEmpty())  return;
 
-
-    zchxRadarVideoTask task;
+    zchxRadarVideoSourceData task;
     task.m_RadarVideo = mRadarVideoMap1T;
-    task.m_Range = mScanRadius;
-    task.m_Rotate = rotate;
+//    task.m_Range = mScanRadius;
+//    task.m_Rotate = rotate;
     mTermIndex = (++mTermIndex) % MAX_RADAR_VIDEO_INDEX_T;
     task.m_IndexT = mTermIndex;
-
+    task.m_TimeStamp = QDateTime::currentDateTime().toTime_t();
     mVideoProcessor->appendSrcData(task);
 }
 
@@ -526,15 +506,5 @@ bool zchxRadarVideoParser::isSameParseSetting(const zchxVideoParserSettings &set
     return mParseParam == setting;
 }
 
-void zchxRadarVideoParser::slotSetRadarHead(double head)
-{
-    mParseParam.head = head;
-}
 
-void zchxRadarVideoParser::updateParseSetting(const zchxVideoParserSettings &setting)
-{
-    mParseParam = setting;
-    if(mVideoProcessor) mVideoProcessor->updateParseSetting(setting);
-    if(mTrackProcessor) mTrackProcessor->updateParseSetting(setting);
-}
 

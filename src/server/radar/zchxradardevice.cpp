@@ -62,7 +62,7 @@ void ZCHXRadarDevice::updateDev(const zchxCommon::zchxRadarDevice &device)
     mDev = device;
     zchxVideoParserSettings parse(mDev.base.name, mDev.base.id, mDev.base.center.lat, mDev.base.center.lon, mDev.parse_param.toJson().toObject());
     parse.filter_enable = mFilterSts;
-    parse.filter_area = mFilterAreaList;
+    parse.filter_area_list = mFilterAreaList;
     for(int i=0; i<mDev.channel_list.size(); i++)
     {
         zchxCommon::zchxRadarChannel channel = mDev.channel_list[i];
@@ -93,7 +93,11 @@ ZCHXRadarDataServer* ZCHXRadarDevice::startChannel(const zchxCommon::zchxRadarCh
     }
     if(!result)
     {
-        mRadarChannelMap.insert(channel.id, QSharedPointer<ZCHXRadarDataServer>(new ZCHXRadarDataServer(mOuputMgr, channel, setting, mDev.local_connect_ip)));
+        QSharedPointer<ZCHXRadarDataServer> server(new ZCHXRadarDataServer(mOuputMgr, channel, setting, mDev.local_connect_ip));
+        mRadarChannelMap.insert(channel.id, server);
+        connect(server.data(), &ZCHXRadarDataServer::signalSendHeadChangedData, [=](int head){
+            emit signalSendHeadChangedData(mDev.base.id, channel.id, head);
+        });
     }
 
     return result;

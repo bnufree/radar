@@ -8,96 +8,49 @@
 #include <QGeoCoordinate>
 #include <QCoreApplication>
 #include <QtMath>
-#include "zchxradarrectextraction.h"
-#include "zchxradartargettrack.h"
 #include <QDebug>
+#include "zchxradarrectextraction.h"
 
 
 ZCHXRadarVideoProcessor::ZCHXRadarVideoProcessor(const zchxVideoParserSettings& setting, QObject *parent)
     : QThread(parent)
-    , mTracker(0)
     , mIsover(false)
-    , mVideoExtractionWorker(0)
+    , mParse(setting)
+    , mTargetExt(new zchxRadarRectExtraction(setting))
 {
     qRegisterMetaType<zchxRadarRectDefList>("const zchxRadarRectDefList&");
     m_objColor1 = QColor(6,144,36);
     m_objColor2 = QColor(103,236,231);
     setStackSize(64000000);
-    updateParseSetting(setting);
 }
 
 
 ZCHXRadarVideoProcessor::~ZCHXRadarVideoProcessor()
 {
-    qDebug()<<"delete rect extrtaction...";
-    if(mVideoExtractionWorker)
+    if(mTargetExt)
     {
-        delete mVideoExtractionWorker;
+        delete mTargetExt; mTargetExt = 0;
     }
-
-    qDebug()<<"delete rect extrtaction end...";
 }
 
-void ZCHXRadarVideoProcessor::appendSrcData(const zchxRadarVideoTask &task)
+
+void ZCHXRadarVideoProcessor::appendSrcData(const zchxRadarVideoSourceData &task)
 {
     QMutexLocker locker(&mMutex);
-    if(mTaskList.size() == 0)
-    {
-        ZCHXRadarVideoProcessorData data;
-        data.append(task);
-        mTaskList.append(data);
-    } else
-    {
-        ZCHXRadarVideoProcessorData &data = mTaskList.last();
-//        qDebug()<<"last size:"<<data.size()<<mParse.video_overlap_cnt;
-        if(data.size() == mParse.video_overlap_cnt)
-        {
-            //数据已经满足多个周期回波叠加, 构建新的回波数据,新的回波数据以以前的回波数据作为基础
-            ZCHXRadarVideoProcessorData newData;
-#if 1
-            for(int i=1; i<mParse.video_overlap_cnt; i++)
-            {
-                newData.append(data[i]);
-            }
-#endif
-            newData.append(task);
-            mTaskList.append(newData);
-        } else
-        {
-            data.append(task);
-        }
-
-        int size = mTaskList.size();
-        qDebug()<<"total task list size:"<<size;
-//        while (mTaskList.size() > 2) {
-//            mTaskList.takeFirst();
-//        }
-    }
+    mTaskList.append(task);
+    qDebug()<<"after append task size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
 }
 
 bool ZCHXRadarVideoProcessor::getProcessData(ZCHXRadarVideoProcessorData& task)
 {
     QMutexLocker locker(&mMutex);
-    if(mTaskList.size() == 0) return false;
-    ZCHXRadarVideoProcessorData& temp = mTaskList.last();
-    if(temp.size() == mParse.video_overlap_cnt)
-    {
-        task = temp;
-#if 1
-        //移除以前的任务,保留最近的一个任务,便于下一个回波过来的时候合成新的任务
-        while (mTaskList.size() > 1) {
-            mTaskList.takeFirst();
-        }
-        //将任务的第一个回波删除
-        temp.takeFirst();
-#else
-        int size = mTaskList.size();
-        qDebug()<<"remove unprocessed video task size:"<<size-1;
-        mTaskList.clear();
-#endif
-        return true;
-    }
-    return false;
+    int size = mTaskList.size();
+    if(size < mParse.user_video_parse.video_overlap_cnt) return false;
+    int start_index = size - mParse.user_video_parse.video_overlap_cnt;
+    task = mTaskList.mid(start_index, mParse.user_video_parse.video_overlap_cnt);
+    mTaskList = mTaskList.mid(start_index + 1);
+    qDebug()<<"task left size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
+    return true;
 }
 
 void ZCHXRadarVideoProcessor::run()
@@ -204,7 +157,8 @@ bool ZCHXRadarVideoProcessor::drawOriginalVideoImage(QPaintDevice *result, const
         if(mIsover) return false;
         RADAR_VIDEO_DATA data = it.value();
 
-        double dAzimuth = data.m_uAzimuth * (360.0 / 4096) + data.m_uHeading;
+        double dAzimuth = data.m_uAzimuth * (360.0 / 4096)/* + data.m_uHeading*/;
+
         //这里方位角是相对于正北方向,将他转换到画图的坐标系
         double angle_paint = -270 - dAzimuth;
         int arc_start = qCeil(angle_paint * 16) - arc_span;
@@ -215,8 +169,8 @@ bool ZCHXRadarVideoProcessor::drawOriginalVideoImage(QPaintDevice *result, const
             int position = i;
             int value = data.mLineData[i];
             if(value == 0) continue;
-            int min_amplitude = mParse.amp.min;
-            int max_amplitude = mParse.amp.max;
+            int min_amplitude = mParse.user_video_parse.amp.min;
+            int max_amplitude = mParse.user_video_parse.amp.max;
 
             if(value<min_amplitude || value > max_amplitude) continue;
             //开始画扫描点对应的圆弧轨迹
@@ -238,7 +192,6 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
     QMap<int,RADAR_VIDEO_DATA> RadarVideo;
     //合并回波数据
     if(!mergeVideoOfMultiTerms(RadarVideo, task)) return;
-    int video_index = task[0].m_IndexT;
 
     //生成回波的原始图片
     int img_width = (RadarVideo.first().m_uTotalCellNum)*2 - 1;
@@ -247,46 +200,31 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
     QImage objPixmap(img_width, img_height, QImage::Format_ARGB32);
     objPixmap.fill(Qt::transparent);//用透明色填充
     if(!drawOriginalVideoImage(&objPixmap, RadarVideo)) return;
-    //对图片进行处理，主要是包括回波过滤，然后提取目标外形点列
-    double range_factor = RadarVideo.first().m_dRangeFactor;
-    QImage result = objPixmap;
-    zchxRadarRectDefList list;
-    if(mVideoExtractionWorker)
+    if(mParse.user_video_parse.use_original_video_img) emit signalSendVideoPixmap(objPixmap);
+
+    if(mTargetExt)
     {
-        mVideoExtractionWorker->parseVideoPieceFromImage(result, list, objPixmap, range_factor, video_index, mOutputImg);
-    }
-    //发送回波矩形集合
-    qDebug()<<"parse rect list size:"<<list.size();
-    if(list.size() > 0)
-    {
-        if(!mTracker)
+        //对图片进行处理，主要是包括回波过滤，然后提取目标外形点列
+        double range_factor = RadarVideo.first().m_dRangeFactor;
+        //开始生成任务供目标进行解析
+        videoParseData data;
+        data.mSrcImg = objPixmap;
+        data.mRangeFactor = range_factor;
+        data.mTermIndex = task.first().m_IndexT;
+        data.mTermTime = task.first().m_TimeStamp;
+
+        zchxRadarRectDefList list;
+        QImage result;
+        if(mTargetExt->extractRectFromVideoSrcImg(list, result, data))
         {
-            signalSendRects(list);
-        } else
-        {
-            mTracker->process(list);
+            if(!mParse.user_video_parse.use_original_video_img)
+            {
+                emit signalSendVideoPixmap(result);
+            }
+
+            emit signalSendParsedVideoData(list);
         }
     }
-    emit signalSendVideoPixmap(result);
+
     return;
-}
-
-void ZCHXRadarVideoProcessor::updateParseSetting(const zchxVideoParserSettings &setting)
-{
-    mParse = setting;
-    //抽出对象初始化
-    mOutputImg = mParse.opencv_img;
-    if(!mVideoExtractionWorker)
-    {
-        mVideoExtractionWorker = new zchxRadarRectExtraction(mParse.center_lat, mParse.center_lon);
-    } else
-    {
-        mVideoExtractionWorker->setRadarLL(mParse.center_lat, mParse.center_lon);
-    }
-
-    mVideoExtractionWorker->setTargetAreaRange(mParse.area.min, mParse.area.max);
-    mVideoExtractionWorker->setTargetLenthRange(mParse.lenth.min, mParse.lenth.max);
-    mVideoExtractionWorker->setFilterAreaEnabled(mParse.filter_enable);
-    mVideoExtractionWorker->setFilterAreaData(mParse.filter_area);
-
 }

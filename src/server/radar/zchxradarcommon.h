@@ -13,30 +13,39 @@
 #include <QVector2D>
 #include <QGeoCoordinate>
 #include "zchxdatadef.h"
+#include <QImage>
 
+struct      videoParseData{
+    QImage          mSrcImg;
+    double          mRangeFactor;
+    int             mTermIndex;
+    quint32          mTermTime;
+};
 
-struct zchxVideoParserSettings : public zchxCommon::zchxVideoParse
+Q_DECLARE_METATYPE(videoParseData)
+
+struct zchxVideoParserSettings
 {
-    QString     name;
-    int         radar_id;
-    int         channel_id;
-    double      center_lat;
-    double      center_lon;
-    double      head;
-    int         cell_num;
-    int         line_num;
-    bool        filter_enable;
-    zchxCommon::zchxfilterAreaList     filter_area;
-    bool        opencv_img;
+public:
+    QString                             name;
+    int                                 radar_id;
+    int                                 channel_id;
+    double                              center_lat;
+    double                              center_lon;
+    int                                 cell_num;
+    int                                 line_num;
+    bool                                filter_enable;
+    zchxCommon::zchxfilterAreaList      filter_area_list;
+    bool                                opencv_img;
+    zchxCommon::zchxVideoParse          user_video_parse;
 
-    zchxVideoParserSettings() : zchxCommon::zchxVideoParse()
+    zchxVideoParserSettings()
     {
         name = "";
         radar_id = 0;
         channel_id = 0;
         center_lat = 0.0;
         center_lon = 0.0;
-        head = 0.0;
         cell_num = 512;
         line_num = 4096;
         filter_enable = true;
@@ -47,70 +56,85 @@ struct zchxVideoParserSettings : public zchxCommon::zchxVideoParse
                             int& pRadarID,
                             double lat,
                             double lon,
-                            const QJsonObject& obj) : zchxCommon::zchxVideoParse(obj)
+                            const QJsonObject& obj)
     {
         name = pName;
         radar_id = pRadarID;
         channel_id = 0;
         center_lat = lat;
         center_lon = lon;
-        head = 0.0;
         cell_num = 512;
         line_num = 4096;
         filter_enable = true;
         opencv_img = false;
+        user_video_parse = zchxCommon::zchxVideoParse(obj);
+    }
+
+    zchxVideoParserSettings(const zchxVideoParserSettings& other)
+    {
+        if(this == &other) return;
+        this->name = other.name;
+        this->radar_id = other.radar_id;
+        this->channel_id = other.channel_id;
+        this->center_lat = other.center_lat;
+        this->center_lon = other.center_lon;
+        this->cell_num = other.cell_num;
+        this->line_num = other.line_num;
+        this->filter_area_list = other.filter_area_list;
+        this->filter_enable = other.filter_enable;
+        this->user_video_parse = other.user_video_parse;
+        this->opencv_img = other.opencv_img;
+    }
+
+    zchxVideoParserSettings& operator =(const zchxVideoParserSettings& other)
+    {
+        if(this == &other) return *this;
+        this->name = other.name;
+        this->radar_id = other.radar_id;
+        this->channel_id = other.channel_id;
+        this->center_lat = other.center_lat;
+        this->center_lon = other.center_lon;
+        this->cell_num = other.cell_num;
+        this->line_num = other.line_num;
+        this->filter_area_list = other.filter_area_list;
+        this->filter_enable = other.filter_enable;
+        this->user_video_parse = other.user_video_parse;
+        this->opencv_img = other.opencv_img;
+        return *this;
     }
 
     bool operator ==(const zchxVideoParserSettings& other) const
     {
-        bool sts = (this->adjust_cog == other.adjust_cog
-                && this->amp == other.amp
-                && this->area == other.area
-                && this->cell_num == other.cell_num
-                && this->center_lat == other.center_lat
-                && this->center_lon == other.center_lon
+        bool sts = (this->cell_num == other.cell_num
+                && fabs(this->center_lat - other.center_lat) < 0.000001
+                && fabs(this->center_lon - other.center_lon) < 0.000001
                 && this->channel_id == other.channel_id
-                && this->check_target_gap == other.check_target_gap
-                && this->clear_target_time == other.clear_target_time
-                && this->confirm_target_cnt == other.confirm_target_cnt
-                && this->direction_invert_hold == other.direction_invert_hold
-                && this->head == other.head
                 && this->filter_enable == other.filter_enable
-                && this->lenth == other.lenth
                 && this->line_num == other.line_num
-                && this->manual_radius == other.manual_radius
-                && this->max_history_num == other.max_history_num
-                && this->max_target_speed == other.max_target_speed
                 && this->name == other.name
                 && this->opencv_img == other.opencv_img
-                && this->output_point == other.output_point
-                && this->output_target_min_speed == other.output_target_min_speed
-                && this->prediction_enabled == other.prediction_enabled
-                && this->prediction_width == other.prediction_width
                 && this->radar_id == other.radar_id
-                && this->radius_coeff == other.radius_coeff
-                && this->scan_time == other.scan_time
-                && this->use_video_radius == other.use_video_radius
-                && this->video_overlap_cnt == other.video_overlap_cnt);
+                && this->user_video_parse == other.user_video_parse);
 
-        if(filter_enable && sts)
+        if(!sts) return false;
+        if(filter_enable)
         {
-           if(filter_area.size() != other.filter_area.size()) return false;
-           for(int i=0; i<filter_area.size(); i++)
-           {
-               zchxCommon::zchxFilterArea cur = filter_area[i];
-               zchxCommon::zchxFilterArea next = other.filter_area[i];
-               if(cur.type != next.type) return false;
-               if(cur.area.size() != next.area.size()) return false;
-               for(int k=0; k<cur.area.size(); k++)
-               {
-                   zchxCommon::zchxLatlon cur_ll = cur.area[k];
-                   zchxCommon::zchxLatlon next_ll = next.area[k];
-                   if(cur_ll.lat != next_ll.lat || cur_ll.lon != next_ll.lon) return false;
-               }
-           }
+            if(filter_area_list.size() != other.filter_area_list.size()) return false;
+            for(int i=0; i<filter_area_list.size(); i++)
+            {
+                zchxCommon::zchxFilterArea cur = filter_area_list.at(i);
+                zchxCommon::zchxFilterArea next = other.filter_area_list.at(i);
+                if(cur.type != next.type) return false;
+                if(cur.area.size() != next.area.size()) return false;
+                for(int k=0; k<cur.area.size(); k++)
+                {
+                    zchxCommon::zchxLatlon cur_ll = cur.area[k];
+                    zchxCommon::zchxLatlon next_ll = next.area[k];
+                    if(cur_ll.lat != next_ll.lat || cur_ll.lon != next_ll.lon) return false;
+                }
+            }
         }
-        return sts;
+        return true;
     }
 };
 
@@ -206,7 +230,7 @@ struct RADAR_VIDEO_DATA
   int m_uMsgIndex;                  // 消息唯一序列号
   int m_uLineNum;
   int m_uAzimuth;                   // 扫描方位
-  int m_uHeading;                   // 航向
+//  int m_uHeading;                   // 航向
   qint64 m_time;                  //时间
   double m_dStartRange;             // 扫描起始距离
   double m_dRangeFactor;            // 距离因子 或者 采样距离
@@ -227,18 +251,17 @@ struct Afterglow
     std::vector<std::pair<float, float>> m_pathCartesian;//雷达目标点集合(笛卡尔坐标)
 };
 
-struct zchxRadarVideoTask
+struct zchxRadarVideoSourceData
 {
     QMap<int,RADAR_VIDEO_DATA>  m_RadarVideo;
-    bool                        m_Rotate;
-    double                      m_Range;
-//    quint64                     m_TimeStamp;
+//    double                      m_Range;
+    quint32                     m_TimeStamp;
     int                         m_IndexT;
 };
-typedef QList<zchxRadarVideoTask>   zchxRadarVideoTaskList;
+typedef QList<zchxRadarVideoSourceData>   zchxRadarVideoSourceDataList;
 
-Q_DECLARE_METATYPE(zchxRadarVideoTask)
-Q_DECLARE_METATYPE(zchxRadarVideoTaskList)
+Q_DECLARE_METATYPE(zchxRadarVideoSourceData)
+Q_DECLARE_METATYPE(zchxRadarVideoSourceDataList)
 
 struct receive_statistics {
   int packets;

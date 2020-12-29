@@ -169,6 +169,8 @@ zchxVideoParse::zchxVideoParse() : zchxData()
     output_target_min_speed = 0.0;
     prediction_enabled = false;
     manual_radius = 1000.0;
+    head = 0;
+    use_original_video_img = false;
 }
 
 zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
@@ -192,6 +194,33 @@ zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
     output_target_min_speed = obj.value("output_target_min_speed").toDouble();
     prediction_enabled = obj.value("prediction_enabled").toBool();
     manual_radius = obj.value("manual_radius").toDouble();
+    head = obj.value("head").toInt();
+    use_original_video_img = obj.value("use_original_video_img").toBool();
+}
+
+bool zchxVideoParse::operator ==(const zchxVideoParse& other) const
+{
+    return (this->adjust_cog == other.adjust_cog
+            && this->amp == other.amp
+            && this->area == other.area
+            && this->check_target_gap == other.check_target_gap
+            && this->clear_target_time == other.clear_target_time
+            && this->confirm_target_cnt == other.confirm_target_cnt
+            && this->direction_invert_hold == other.direction_invert_hold
+            && this->lenth == other.lenth
+            && this->manual_radius == other.manual_radius
+            && this->max_history_num == other.max_history_num
+            && this->max_target_speed == other.max_target_speed
+            && this->output_point == other.output_point
+            && this->output_target_min_speed == other.output_target_min_speed
+            && this->prediction_enabled == other.prediction_enabled
+            && this->prediction_width == other.prediction_width
+            && this->radius_coeff == other.radius_coeff
+            && this->scan_time == other.scan_time
+            && this->use_video_radius == other.use_video_radius
+            && this->video_overlap_cnt == other.video_overlap_cnt
+            && this->head == other.head
+            && this->use_original_video_img == other.use_original_video_img);
 }
 
 QJsonValue zchxVideoParse::toJson() const
@@ -216,6 +245,8 @@ QJsonValue zchxVideoParse::toJson() const
     obj.insert("output_target_min_speed", output_target_min_speed);
     obj.insert("prediction_enabled", prediction_enabled);
     obj.insert("manual_radius", manual_radius);
+    obj.insert("head", head);
+    obj.insert("use_original_video_img", use_original_video_img);
     return obj;
 }
 

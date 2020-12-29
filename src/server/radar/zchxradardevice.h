@@ -29,6 +29,7 @@ signals:
     void colorSetSignal(int,int,int,int,int,int);//回波颜色设置
     void signalSendRadarType(int channel, int type, const QString& radarID);
     void signalSendRecvIP(const QString& ip);
+    void signalSendHeadChangedData(int radar, int channel, int head);
 
 public slots:
     void slotOutputData(int channel, bool sts);//打印回波数据

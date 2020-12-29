@@ -81,6 +81,8 @@ signals:
     void signalSendRecvedContent(qint64 time, const QString& name, const QString& content);
     void signalSendVideoData(const QByteArray& bytes);
     void signalSendRecvIP(const QString& ip);
+    void signalSendHeadChangedData(int head);
+    void signalSendScanTime(double secs);
 
 public slots:
     void slotPrintRecvData(bool);//打印回波数据
@@ -110,13 +112,7 @@ private:
     zchxCommon::zchxRadarChannel          mChSet;
     zchxVideoParserSettings             mParseSet;
     zchxRadarVideoParser                *mVideoParse;
-    //发送心跳信息
-//    bool                                mHearEnable;
     QTimer*                             mHeartTimer;
-//    int                                 mHeartTimeInterval;
-    //雷达断开后自动打开
-//    bool                                mAutoOpenEnable;
-//    int                                 mAutoOpenInerval;
     QTimer*                             mAutoOpenTimer;
     //雷达的基本信息
     int                                 mType;           //3G, 4G, 6G

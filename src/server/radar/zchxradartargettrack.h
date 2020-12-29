@@ -7,9 +7,8 @@
 #include <QMutex>
 #include "targetnode.h"
 #include "zchxdatadef.h"
+#include <QThread>
 
-typedef     zchxRadarRectDefList        zchxRadarTrackTask;
-typedef     QList<zchxRadarTrackTask>   zchxRadarTrackTaskList;
 
 
 //将预推区域和目标进行关联
@@ -27,13 +26,8 @@ struct AreaNodeTable{
 
 #define     TARGET_CONFIRM_NODE_COUNT         5
 
-#undef     TRACK_THREAD
 
-#ifdef TRACK_THREAD
 class zchxRadarTargetTrack : public QThread
-#else
-class zchxRadarTargetTrack : public QObject
-#endif
 {
     Q_OBJECT
 public:
@@ -47,17 +41,25 @@ public:
     explicit    zchxRadarTargetTrack(const zchxVideoParserSettings& setting, QObject *parent = 0);
     ~zchxRadarTargetTrack();
 public slots:
-    void        appendTask(const zchxRadarRectDefList& task);
-    void        process(const zchxRadarTrackTask& task);
-    void        processWithPossibleRoute(const zchxRadarTrackTask& task);
+    void        appendTrackTask(const zchxRadarRectDefList& task);
+    void        setOver(bool sts) {mIsOver = sts;}
+
+protected:
+    void     run();
+private:
+    void        CounterPossibleChildRect(QList<AreaNodeTable>& areaTableList, QMap<TargetNode*, zchxRadarRectDefList>& result ,const zchxRadarRectDefList& rects);
+    void        UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRadarRectDefList>& counter, QList<int>& used_rect_list);
+    void        UpdateNodeWithExistVideoRect(QList<TargetNode*> list, QList<int>& used_index_list, const zchxRadarRectDefList& rects);
+    void        determineTargetStatus();
+    void        targetRecheck(int term);
+    void        PredictionMoveNode(int term, quint32 now);
+
+    void        process(const zchxRadarRectDefList& task);
+    void        processWithPossibleRoute(const zchxRadarRectDefList& task);
     void        appendUserDefObj(const zchxCommon::UserSpecifiedObj& obj);
     void        removeUserDefObj(const zchxCommon::UserSpecifiedObj& obj);
     void        updateParseSetting(const zchxVideoParserSettings& setting);
-protected:
-#ifdef TRACK_THREAD
-    void     run();
-#endif
-private:
+
     QList<AreaNodeTable>  calculateTargetTrackMode(double max_speed, quint32 now, double scan_time);
     NodeStatus        checkRoutePathSts(QList<TargetNode*>& newRoueNodeList, const QList<TargetNode*>& path);
     void        splitAllRoutesIntoTargets(TargetNode* node, TargetNode* routeNode);
@@ -69,8 +71,8 @@ private:
 
     int         getCurrentNodeNum();
     void        appendNode(TargetNode* node, int source);
-    bool        getTask(zchxRadarTrackTask& task);    
-    void        mergeRectTargetInDistance(zchxRadarTrackTask &temp_list, int target_merge_distance);
+    bool        getTask(zchxRadarRectDefList& task);
+    void        mergeRectTargetInDistance(zchxRadarRectDefList &temp_list, int target_merge_distance);
     Latlon      getMergeTargetLL(const zchxRadarRectDefList &list);
     void        changeTargetLL(const Latlon &ll, zchxRadarRectDef &cur);
     bool        isDirectionChange(double src, double target);
@@ -86,8 +88,10 @@ signals:
 public slots:
 
 private:
-    zchxRadarTrackTaskList      mTaskList;
-    QMutex                      mMutex;
+    QList<zchxRadarRectDefList>       mTaskList;
+    QMutex                      mTaskMutex;
+
+
     zchxRadarRectMap            mRadarRectMap;//用于发送的回波矩形MAP
     int                         mRectNum;
     int                         mMinNum;
@@ -98,6 +102,11 @@ private:
     //目标是否预推更新
     int                         mTargetPredictionInterval;           //预推周期 比如2个周期更新一次
     zchxVideoParserSettings     mSettings;
+
+    bool                        mIsOver;
+    quint32                     mLastVideoDataTime;
+    double                      mMaxSpeed;
+
 };
 
 #endif // ZCHXRADARTARGETTRACK_H

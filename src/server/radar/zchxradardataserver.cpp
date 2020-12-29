@@ -233,7 +233,7 @@ ZCHXRadarDataServer::~ZCHXRadarDataServer()
     {
         delete mVideoParse;
     }
-    qDebug()<<"stop server work thread start...";
+    qDebug()<<"stop server work thread start..."<<mWorkThread;
     if(mWorkThread && mWorkThread->isRunning())
     {
         mWorkThread->quit();
@@ -251,6 +251,8 @@ void ZCHXRadarDataServer::updateChannelSettings(const zchxCommon::zchxRadarChann
     mChSet = channel;
     mChannelReport.mChannelID = mChSet.id;
     mParseSet = parse;
+    qDebug()<<"src parse:"<<parse.cell_num<<parse.line_num;
+    qDebug()<<"dest parse:"<<mParseSet.cell_num<<mParseSet.line_num;
     updateParseSetting(mParseSet);
     initDataSocket();
 }
@@ -316,16 +318,19 @@ void ZCHXRadarDataServer::updateParseSetting(const zchxVideoParserSettings &pars
     mChannelReport.mRadarID = parse.radar_id;
     if(mVideoParse && !mVideoParse->isSameParseSetting(parse))
     {
-#if 1
+#if 0
         mVideoParse->updateParseSetting(parse);
 #else
+        qDebug()<<"stop now exist video data parse....";
         disconnect(this, SIGNAL(signalSendVideoData(QByteArray)), mVideoParse, SLOT(slotRecvVideoData(QByteArray)));
         delete mVideoParse;
         mVideoParse = 0;
+        qDebug()<<"stop now exist video data parse end";
 #endif
     }
     if(!mVideoParse)
     {
+        qDebug()<<"start new video data parse...."<<parse.cell_num<<parse.line_num;
         mVideoParse = new zchxRadarVideoParser(mOutputMgr, parse);
         connect(this, SIGNAL(signalSendVideoData(QByteArray)), mVideoParse, SLOT(slotRecvVideoData(QByteArray)));
     }
@@ -800,7 +805,12 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         int ba = (int)data->bearing_alignment / 10;
         if (ba > 180) ba = ba - 360;
         updateReportValue(zchxCommon::BEARING_ALIGNMENT, ba);
-        if(mVideoParse) mVideoParse->slotSetRadarHead(ba * 1.0);
+        if(mParseSet.user_video_parse.head != ba)
+        {
+            mParseSet.user_video_parse.head = ba;
+            updateParseSetting(mParseSet);
+            emit signalSendHeadChangedData(ba);
+        }
         // antenna height
         updateReportValue(zchxCommon::ANTENNA_HEIGHT, data->antenna_height / 1000);
         break;
@@ -894,7 +904,7 @@ void ZCHXRadarDataServer::slotPrintRecvData(bool sts)//打印回波数据
 void ZCHXRadarDataServer::updateFilterAreaSettings(bool sts, const zchxCommon::zchxfilterAreaList &list)
 {
     mParseSet.filter_enable = sts;
-    mParseSet.filter_area = list;
+    mParseSet.filter_area_list = list;
     updateParseSetting(mParseSet);
 }
 
