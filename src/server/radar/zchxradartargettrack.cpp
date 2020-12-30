@@ -3,7 +3,7 @@
 #include <QGeoCoordinate>
 
 
-#define     DEBUG_TRACK_INFO                if(0) qDebug()
+#define     DEBUG_TRACK_INFO                if(1) qDebug()
 
 
 extern bool restart_simulate;
@@ -281,13 +281,6 @@ void zchxRadarTargetTrack::UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRa
         bool update_real_node = false;
         foreach (zchxRadarRectDef target, targetList)
         {
-            //将目标添加到已经使用的队列中， 防止同一个回波块出现两个目标
-            if(!used_index_list.contains(target.rectnumber()))
-            {
-                DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
-                used_index_list.append(target.rectnumber());
-            }
-
             //目标是否已经更新过
             if(node->containsRect(target)) continue;
             //开始计算目标的速度等信息， 如果速度超出了最大速度等，就使用下一个目标
@@ -307,6 +300,8 @@ void zchxRadarTargetTrack::UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRa
             }
             //检查速度是否超出了设定的最大速度, 超过了最大速度就跳过不处理
             if(sog > mMaxSpeed) continue;
+            //检查目标的速度是否超出了前一个节点的速度的2倍以上， 不处理
+            if(node->mDefRect->sogms() > 0 && sog > node->mDefRect->sogms() * 2) continue;
 
             //角度校正
             double refer_cog = node->getReferenceCog();
@@ -325,6 +320,13 @@ void zchxRadarTargetTrack::UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRa
                 DEBUG_TRACK_INFO <<"add child node into path. node number: "<<node->mSerialNum<<" rect number:"<<target.rectnumber();
             }
             update_real_node = true;
+            //将目标添加到已经使用的队列中， 防止同一个回波块出现两个目标
+            if(!used_index_list.contains(target.rectnumber()))
+            {
+                DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
+                used_index_list.append(target.rectnumber());
+            }
+
         }
         if(!update_real_node)
         {
@@ -360,12 +362,7 @@ void zchxRadarTargetTrack::UpdateNodeWithExistVideoRect(QList<TargetNode*> list,
         DEBUG_TRACK_INFO <<"update current node with rect for node is rect area...this wanna not see. ";
         //目标节点本身没有更新，只是他现在处在一个回波图形上，如果他不更新，则有可能同一个回波图形在不同的位置出现了多个目标，
         //为了避免这种情况,我们还是假定目标移动到了回波图形的中心。
-        zchxRadarRectDef target = targetList.first();
-        if(!used_index_list.contains(target.rectnumber()))
-        {
-            DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
-            used_index_list.append(target.rectnumber());
-        }
+        zchxRadarRectDef target = targetList.first();        
         target.set_realdata(true);
         //根据不同的节点位置来进行区分，如果目标所在的路径只有一个节点，则直接将目标移动过去。
         //如果目标的路径上存在多个节点，如果在目标的运动方向上，则添加到目标的子节点，
@@ -380,6 +377,11 @@ void zchxRadarTargetTrack::UpdateNodeWithExistVideoRect(QList<TargetNode*> list,
             node->mDefRect->CopyFrom(target);
             node->mUpdateTime = target.updatetime();
             node->mVideoIndexList.append(target.videocycleindex());
+            if(!used_index_list.contains(target.rectnumber()))
+            {
+                DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
+                used_index_list.append(target.rectnumber());
+            }
             continue;
         }
 
@@ -438,21 +440,28 @@ void zchxRadarTargetTrack::UpdateNodeWithExistVideoRect(QList<TargetNode*> list,
         double sog = 0.0;
         if(delta_time > 0) sog = distance / delta_time;
         //速度校正
-        double refer_sog = node->getReferenceSog();
+        double refer_sog = startNode->getReferenceSog();
         if(refer_sog > 0.1)
         {
             sog = (sog + refer_sog) / 2.0;
         }
         //检查速度是否超出了设定的最大速度, 超过了最大速度就跳过不处理
         if(sog > mMaxSpeed) continue;
+        //检查目标的速度是否超出了前一个节点的速度的2倍以上， 不处理
+        if(startNode->mDefRect->sogms() > 0 && sog > startNode->mDefRect->sogms() * 2) continue;
         //角度校正
-        double refer_cog = node->getReferenceCog();
+        double refer_cog = startNode->getReferenceCog();
         if(refer_cog > 0) cog = (cog + refer_cog) / 2.0;
 
         //更新到目标路径中
         target.set_cog(cog);
         target.set_sogms(sog);
         startNode->mChildren.append(QSharedPointer<TargetNode>(new TargetNode(target, startNode)));
+        if(!used_index_list.contains(target.rectnumber()))
+        {
+            DEBUG_TRACK_INFO <<"add origin rect into used list , not make new node from it."<<target.rectnumber();
+            used_index_list.append(target.rectnumber());
+        }
 
     }
 }
@@ -1185,7 +1194,7 @@ void zchxRadarTargetTrack::outputTargets()
         zchxRadarRectDef *top_rect = node->mDefRect;
         if(!top_rect) continue;
         //静止点饥数据输出控制
-        if(node->isNodeSilent() && silent_obj_count > 0 && silent_obj_count > total_size * 0.4) continue;
+//        if(node->isNodeSilent() && silent_obj_count > 0 && silent_obj_count > total_size * 0.4) continue;
         //构造目标数据
         updateTrackPointWithNode(track_list, node, &silent_obj_count);
     }
