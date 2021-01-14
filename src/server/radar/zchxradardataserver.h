@@ -101,7 +101,7 @@ private slots:
     void slotRecvVideoData(const QByteArray &sRadarData);//解析
     void slotRecvReportData(const QByteArray& bytes);
     void slotRecvHeartData(const QByteArray& bytes);
-    void initDataSocket();
+    void initDataSocket(bool change_ip);
 private:
     void outputData2File(int type, const QByteArray& data);
     void compressFiles(QStringList& list, QString& fileName);

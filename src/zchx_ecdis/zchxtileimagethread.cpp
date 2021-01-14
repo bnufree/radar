@@ -96,7 +96,7 @@ QPixmap* zchxTileImageThread::loadImageFromUrl(const QString &url)
     {
         img->fill(Qt::transparent);
     }
-    qDebug()<<"end load image:"<<format<<" img:"<<url<<"sts:"<<sts;
+//    qDebug()<<"end load image:"<<format<<" img:"<<url<<"sts:"<<sts;
     return img;
 }
 }

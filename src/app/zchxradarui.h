@@ -32,6 +32,8 @@ private slots:
 
     void on_ok_interface_clicked();
 
+    void on_lap_color_set_clicked();
+
 private:
     Ui::zchxRadarUi *ui;
     zchxCommon::zchxRadarDevice mDev;

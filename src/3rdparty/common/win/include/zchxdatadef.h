@@ -235,6 +235,8 @@ public:
     int             prediction_width;
     bool            prediction_enabled;
     int             video_overlap_cnt;
+    bool            merge_video;
+    QVariantList     video_color_list;
     int             max_target_speed;
     double          scan_time;
     double          manual_radius;

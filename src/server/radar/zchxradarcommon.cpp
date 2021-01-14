@@ -631,7 +631,7 @@ void  exportRectDef2File(const zchxRadarRectDefList& list, const QString& fileNa
     {
         zchxRadarRectDef rect = list[i];
         QString line;
-        line.append(QString("").sprintf("%.6f,%.6f,%d",rect.center().latitude(), rect.center().longitude(), rect.rectnumber()));
+        line.append(QString("").sprintf("%.6f,%.6f,%d",rect.mSrcRect.center().latitude(), rect.mSrcRect.center().longitude(), rect.mSrcRect.rectnumber()));
         file.write(line.toUtf8());
         file.write("\n");
     }

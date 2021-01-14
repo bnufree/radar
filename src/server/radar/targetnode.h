@@ -2,6 +2,7 @@
 #define TARGETNODE_H
 
 #include "zchxradarcommon.h"
+#include <QSharedPointer>
 
 enum  TARGET_DIRECTION{
     TARGET_DIRECTION_UNDEF = 0,     //点列不足的情况
@@ -13,7 +14,8 @@ enum  TARGET_DIRECTION{
 //根节点可以产生很多条分支,但是每一个分支点只有一个子节点
 enum NodeStatus{
     Node_UnDef = 0,
-    Node_Moving,
+    Node_NotMove,                   //静止
+    Node_Moving,                    //移动
     Node_Lost,
     Node_GAP_ABNORMAL,
 };
@@ -26,45 +28,28 @@ public:
     NodeStatus                                  mStatus;
     uint                                         mUpdateTime;        //目标最新的更新时间
     zchxRadarRectDef                            *mDefRect;
-    QList<QSharedPointer<TargetNode>>           mChildren;           //孩子
-    TargetNode*                                 mParent;             //父亲
-    QList<uint>                                  mVideoIndexList;       //回波周期
-    bool                                        mFalseAlarm;         //是否为虚警
-    TargetNode*                                 mPredictionNode;    //预推节点
-    uint                                        mPredictionIndex;   //预推节点对应的回波周期
-    uint                                        mPredictionTimes;   //预推次数
+    QSharedPointer<TargetNode>                  mParent;             //父亲
+    uint                                        mLastLostTime;      //目标丢失的时间
+    zchxRadarRectDefList                        mRelativeRectList;
+    uint                                        mVideoTerm;
+    int                                         mLevel;
+    TargetNode*                                 mChild;
+
 
     TargetNode();
-    TargetNode(const zchxRadarRectDef& other, TargetNode* parentNode = 0);
+    TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode> parentNode = QSharedPointer<TargetNode>());
     ~TargetNode();
 
 
     void setStatus(NodeStatus sts);
-    QList<TargetNode*> getAllBranchLastChild();
-    TargetNode* getLastChild(TargetNode* src);
-    TargetNode* getLastChild();
-    bool hasChildren() const;
-    bool isNodeSilent() const; //静止目标
-    bool isNodeMoving() const;
     double getReferenceSog(bool average = true);
-    double getReferenceCog(bool average = true);
+    Latlon getReferencePoint();
     void updateSerialNum(int num);
-    void setAllNodeSeriaNum(int num);
-    void updateRouteNodePathStatus(NodeStatus sts);
-    bool isOutputEnabled() const;
     TargetNode* topNode();
     int     getDepth();
     bool  isTopNode() const;
-    void  removeChild(TargetNode* child);
-    QList<uint>  getVideoIndexList();
-    //获取子节点最后的更新时间
-    uint getLatestChildUpdateTime();
-    bool isFalseAlarm(int video_index_now);
-    //清除预推信息
-    void clearPrediction();
-    void makePrediction(int videoIndex, uint videoTime, bool fixed_space_time = false);
-    //
-    bool containsRect(const zchxRadarRectDef& other) const;
+    QList<uint>  getVideoTermIndexList();
+    bool  isFalseAlarm() const;
 
 };
 

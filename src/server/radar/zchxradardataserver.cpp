@@ -254,10 +254,10 @@ void ZCHXRadarDataServer::updateChannelSettings(const zchxCommon::zchxRadarChann
     qDebug()<<"src parse:"<<parse.cell_num<<parse.line_num;
     qDebug()<<"dest parse:"<<mParseSet.cell_num<<mParseSet.line_num;
     updateParseSetting(mParseSet);
-    initDataSocket();
+    initDataSocket(false);
 }
 
-void ZCHXRadarDataServer::initDataSocket()
+void ZCHXRadarDataServer::initDataSocket(bool ip_change)
 {
     if(mLocalIPList.size() == 0) return;
     if(mVideoSocket)
@@ -276,8 +276,8 @@ void ZCHXRadarDataServer::initDataSocket()
         mHeartSocket = 0;
     }
     if(mCurrentIPIndex >= mLocalIPList.size() || mCurrentIPIndex < 0) mCurrentIPIndex = 0;
+    if(ip_change) mCurrentIPIndex++;
     QString ip_str = mLocalIPList[mCurrentIPIndex];
-    mCurrentIPIndex++;
     mCurrentIPIndex = mCurrentIPIndex % mLocalIPList.size();
 
     QNetworkInterface nif = findNIF(ip_str);
@@ -291,7 +291,7 @@ void ZCHXRadarDataServer::initDataSocket()
         mVideoSocket->setIsOver(true);
         mHeartSocket->setIsOver(true);
 #endif
-        initDataSocket();
+        initDataSocket(true);
     }
 #ifndef UDP_THREAD
     , Qt::DirectConnection
@@ -304,7 +304,7 @@ void ZCHXRadarDataServer::initDataSocket()
         mReportSocket->setIsOver(true);
         mHeartSocket->setIsOver(true);
 #endif
-        initDataSocket();
+        initDataSocket(true);
     }
 #ifndef UDP_THREAD
     , Qt::DirectConnection
@@ -708,12 +708,10 @@ void ZCHXRadarDataServer::updateReportValue(int controlType, QJsonValue value)
 
 void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
 {
-//    qDebug()<<"recv report data:"<<bytes.size();
     if(mOutputData) outputData2File(Data_Report, bytes);
     int len = bytes.size();
     if(len < 3 ) return;
     unsigned char val = bytes[1];
-//    qDebug()<<"recv report data with head:"<<bytes.mid(1,1).toHex().toUpper()<<" and total:"<<bytes.toUpper();
     if(val != 0xC4) return;
 
     switch ((len << 8) + bytes[0])
@@ -775,19 +773,19 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         RadarReport_03C4_129 *s = (RadarReport_03C4_129 *)bytes.data();
         switch (s->radar_type) {
         case 0x0f:
-//            qDebug()<<"current radar is BR24";
+            qDebug()<<"current radar is BR24";
             mType = zchxCommon::RADAR_BR24;
             break;
         case 0x08:
-//            qDebug()<<"current radar is 3G";
+            qDebug()<<"current radar is 3G";
             mType = zchxCommon::RADAR_3G;
             break;
         case 0x01:
-//            qDebug()<<"current radar is 4G";
+            qDebug()<<"current radar is 4G";
             mType = zchxCommon::RADAR_4G;
             break;
         case 0x00:
-//            qDebug()<<"current radar is 6G";
+            qDebug()<<"current radar is 6G";
             mType = zchxCommon::RADAR_6G;
             break;
         default:

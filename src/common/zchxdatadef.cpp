@@ -171,6 +171,10 @@ zchxVideoParse::zchxVideoParse() : zchxData()
     manual_radius = 1000.0;
     head = 0;
     use_original_video_img = false;
+    merge_video = false;
+    video_color_list.append(QVariant("#ff0000"));
+    video_color_list.append(QVariant("#00ff00"));
+    video_color_list.append(QVariant("#0000ff"));
 }
 
 zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
@@ -196,6 +200,13 @@ zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
     manual_radius = obj.value("manual_radius").toDouble();
     head = obj.value("head").toInt();
     use_original_video_img = obj.value("use_original_video_img").toBool();
+    merge_video = obj.value("merge_video").toBool();
+    video_color_list = obj.value("video_color_list").toArray().toVariantList();
+    while (video_color_list.size() < video_overlap_cnt)
+    {
+        video_color_list.append(QVariant("#ff0000"));
+    }
+
 }
 
 bool zchxVideoParse::operator ==(const zchxVideoParse& other) const
@@ -220,7 +231,9 @@ bool zchxVideoParse::operator ==(const zchxVideoParse& other) const
             && this->use_video_radius == other.use_video_radius
             && this->video_overlap_cnt == other.video_overlap_cnt
             && this->head == other.head
-            && this->use_original_video_img == other.use_original_video_img);
+            && this->use_original_video_img == other.use_original_video_img
+            && this->merge_video == other.merge_video
+            && this->video_color_list == other.video_color_list);
 }
 
 QJsonValue zchxVideoParse::toJson() const
@@ -247,6 +260,8 @@ QJsonValue zchxVideoParse::toJson() const
     obj.insert("manual_radius", manual_radius);
     obj.insert("head", head);
     obj.insert("use_original_video_img", use_original_video_img);
+    obj.insert("merge_video", merge_video);
+    obj.insert("video_color_list", QJsonArray::fromVariantList(video_color_list));
     return obj;
 }
 

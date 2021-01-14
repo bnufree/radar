@@ -8,38 +8,35 @@
 #define         FALSE_ALARM_COUNTER_PERCENT  0.5
 
 
-int             target_silent_confirm_counter = 5;
-bool            output_silent_node = true;
-
 TargetNode::TargetNode()
 {
-    mDefRect = 0;
-    mChildren.clear();
-    mUpdateTime = QDateTime::currentDateTime().toTime_t();
-    mParent = 0;
-    mStatus = Node_UnDef;
     mSerialNum = 0;
-    mFalseAlarm = false;
-    mPredictionNode = 0;
-    clearPrediction();
+    mStatus = Node_UnDef;
+    mDefRect = 0;
+    mUpdateTime = QDateTime::currentDateTime().toTime_t();
+    mLastLostTime = 0;
+    mVideoTerm = 0;
+    mLevel = 1;
+    mChild = 0;
 }
-TargetNode::TargetNode(const zchxRadarRectDef& other, TargetNode* parentNode)
+TargetNode::TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode> parentNode)
 {
     mDefRect = new zchxRadarRectDef(other);
-    mChildren.clear();
-    mUpdateTime = mDefRect->updatetime();
+    mUpdateTime = mDefRect->mSrcRect.updatetime();
     mParent = parentNode;
     mSerialNum = 0;
     mStatus = Node_UnDef;
-    if(parentNode)
+    mLevel = 1;
+    mChild = 0;
+    if(mParent)
     {
         mStatus = mParent->mStatus;
         mSerialNum = mParent->mSerialNum;
+        mLevel = mParent->mLevel + 1;
+        mParent->mChild = this;
     }
-    mVideoIndexList.append(other.videocycleindex());
-    mFalseAlarm = false;
-    mPredictionNode = 0;
-    clearPrediction();
+    mVideoTerm = other.mSrcRect.videocycleindex();
+    mLastLostTime = 0;
 }
 
 void TargetNode::setStatus(NodeStatus sts)
@@ -49,109 +46,54 @@ void TargetNode::setStatus(NodeStatus sts)
 
 TargetNode::~TargetNode()
 {
-//    if(!mDefRect)
-//        qDebug()<<"node discontruct..."<<mSerialNum<<" rect : null";
-//    else
-//        qDebug()<<"node discontruct..."<<mSerialNum<<" rect: "<<mDefRect->rectnumber();
-    mChildren.clear();
+//    qDebug()<<"delete me:"<<this<<" reset parent:"<<mParent.data();
+    if(mParent) mParent.reset();
     if(mDefRect) delete mDefRect;
 }
-QList<TargetNode*> TargetNode::getAllBranchLastChild()
-{
-    QList<TargetNode*> result;
-    for(int i=0; i<mChildren.size(); i++)
-    {
-        TargetNode *child = mChildren[i].data();
-        if(!child) continue;
-        result.append(child->getLastChild(child));
-    }
-    return result;
-}
 
-TargetNode* TargetNode::getLastChild(TargetNode* src)
-{
-    if(src->mChildren.size() == 0) return src;
-    TargetNode *child = src->mChildren.first().data();
-    return child->getLastChild(child);
-}
-
-TargetNode* TargetNode::getLastChild()
-{
-    if(mChildren.size() == 0) return this;
-    TargetNode *child = mChildren.first().data();
-    return child->getLastChild();
-}
-
-bool TargetNode::hasChildren() const
-{
-    return mChildren.size() != 0;
-}
-
-bool TargetNode::containsRect(const zchxRadarRectDef &other) const
-{
-    if(mChildren.size() == 0) return false;
-    for(int i=0; i<mChildren.size(); i++)
-    {
-        TargetNode *child = mChildren[i].data();
-        if(child && child->mDefRect)
-        {
-            if(child->mDefRect->videocycleindex() == other.videocycleindex() && child->mDefRect->rectnumber() == other.rectnumber())
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool TargetNode::isNodeSilent() const //静止目标
-{
-    return mStatus == Node_UnDef && mChildren.size() == 0 && mVideoIndexList.size() >= target_silent_confirm_counter;
-}
-
-bool TargetNode::isNodeMoving() const
-{
-    return mStatus == Node_Moving;
-}
 
 double TargetNode::getReferenceSog(bool average)
 {
     if(!mDefRect) return 0.0;
-    double sum = mDefRect->sogms();
+    double sum = mDefRect->mSrcRect.sogms();
     if(!average) return sum;
     int num = 1;
-    TargetNode* pre = mParent;
+    TargetNode* pre = mParent.data();
     while (pre) {
         if(pre->mDefRect && pre->mParent)  //根节点没有速度  暂且不考虑
         {
-            sum += pre->mDefRect->sogms();
+            sum += pre->mDefRect->mSrcRect.sogms();
             num++;
         }
         if(num == 5) break;
-        pre = pre->mParent;
+        pre = pre->mParent.data();
     }
 
     return sum / num;
 }
 
-double TargetNode::getReferenceCog(bool average)
+Latlon TargetNode::getReferencePoint()
 {
-    if(!mDefRect) return 0.0;
-    double sum = mDefRect->cog();
-    if(!average) return sum;
+    Latlon ll;
+    if(!mDefRect) return ll;
+    ll.lon = mDefRect->mSrcRect.center().longitude();
+    ll.lat = mDefRect->mSrcRect.center().latitude();
     int num = 1;
-    TargetNode* pre = mParent;
+    TargetNode* pre = mParent.data();
     while (pre) {
         if(pre->mDefRect)
         {
-            sum += pre->mDefRect->cog();
-        }
-        num++;
+            ll.lon += pre->mDefRect->mSrcRect.center().longitude();
+            ll.lat += pre->mDefRect->mSrcRect.center().latitude();
+            num++;
+        }        
         if(num == 5) break;
-        pre = pre->mParent;
+        pre = pre->mParent.data();
     }
 
-    return sum / num;
+    ll.lon = ll.lon / num;
+    ll.lat = ll.lat / num;
+    return ll;
 }
 
 void TargetNode::updateSerialNum(int num)
@@ -159,46 +101,15 @@ void TargetNode::updateSerialNum(int num)
     if(mSerialNum != num) mSerialNum = num;
 }
 
-void TargetNode::setAllNodeSeriaNum(int num)
-{
-    updateSerialNum(num);
-    for(int i=0; i<mChildren.size();i++)
-    {
-        TargetNode* child = mChildren[i].data();
-        while (child) {
-            updateSerialNum(num);
-            if(child->mChildren.size() == 0) break;
-            child = child->mChildren.first().data();
-        }
-    }
-}
-
-void TargetNode::updateRouteNodePathStatus(NodeStatus sts)
-{
-    if(this->mChildren.size() >= 2) return;
-    TargetNode *node = this;
-    while (node) {
-        if(node->mStatus != sts) node->mStatus = sts;
-        if(node->mChildren.size() == 0) break;
-        node = node->mChildren.first().data();
-    }
-}
-
-bool TargetNode::isOutputEnabled() const
-{
-    if(isNodeMoving()) return true;
-    if(isNodeSilent()) return true;
-    return false;
-}
 
 TargetNode* TargetNode::topNode()
 {
     if(!mParent) return this;
-    TargetNode *parent = mParent;
+    TargetNode *parent = mParent.data();
     while (parent) {
         if(parent->mParent)
         {
-            parent = parent->mParent;
+            parent = parent->mParent.data();
         } else
         {
             break;
@@ -211,15 +122,7 @@ TargetNode* TargetNode::topNode()
 
 int TargetNode::getDepth()
 {
-    if(mChildren.size() != 1) return 1;
-    int depth = 1;
-    TargetNode *now = this;
-    while (now->mChildren.size() > 0) {
-        depth++;
-        now = now->mChildren.first().data();
-    }
-
-    return depth;
+    return mLevel;
 }
 
 bool  TargetNode::isTopNode() const
@@ -227,137 +130,50 @@ bool  TargetNode::isTopNode() const
     return mParent == 0;
 }
 
-void  TargetNode::removeChild(TargetNode* child)
-{
-    for(int i=0; i<mChildren.size(); i++)
-    {
-        if(mChildren[i].data() == child)
-        {
-            mChildren.removeAt(i);
-            break;
-        }
-    }
-}
 
-QList<uint>  TargetNode::getVideoIndexList()
+QList<uint>  TargetNode::getVideoTermIndexList()
 {
     QList<uint> result;
-    result.append(this->mVideoIndexList);
-    for(int i=0; i<mChildren.size(); i++)
-    {
-        //将孩子节点的周期也添加进去
-        TargetNode* child = mChildren[i].data();
-        while (child) {
-            foreach (int id, child->mVideoIndexList) {
-                if(result.contains(id)) continue;
-                result.append(id);
-            }
-            if(child->mChildren.size() == 0) break;
-            child = child->mChildren[0].data();
-        }
+    result.append(mVideoTerm);
+    TargetNode* parent = mParent.data();
+    while (parent) {
+        result.append(parent->mVideoTerm);
+        parent = parent->mParent.data();
     }
-    //进行升序排列，最多保持1000个
-    std::sort(result.begin(), result.end());
-    if(result.size() >= 1000)
-    {
-        int index = result.size() - 1000;
-        result = result.mid(index, 1000);
-    }
-
     return result;
 }
 
-//获取子节点最后的更新时间
-uint TargetNode::getLatestChildUpdateTime()
+
+bool TargetNode::isFalseAlarm() const
 {
-    QList<TargetNode*> list = getAllBranchLastChild();
-    if(list.size() == 0) return mUpdateTime;
-    uint time = list.first()->mUpdateTime;
-    for(int i=1; i<list.size(); i++)
-    {
-        if(time < list[i]->mUpdateTime)
-        {
-            time = list[i]->mUpdateTime;
-        }
-    }
-    return time;
-}
-bool TargetNode::isFalseAlarm(int video_index_now)
-{
-    //静止目标才判断是不是虚警。静止目标没有子节点 只有一个节点
-    if(!isNodeSilent()) return false;
-    QList<uint> list = getVideoIndexList();
-    if(list.size() == 0) return false;
-    //获取目标统计的开始周期
-    uint now = video_index_now;
-    uint end = list.last();
-    if(now < end) now += MAX_RADAR_VIDEO_INDEX_T;
-    uint start = list.first();
-    uint seg = now - start + 1;
-    if(seg < FALSE_ALARM_INDEX_SIZE) return false;
-    start = now - FALSE_ALARM_INDEX_SIZE + 1;
-    //从开始位置看，各个值是否包含在回波周期队列中，进行连续计数或者缺失统计
-    int continue_num = 0;
-    int total_num = 0;
-    for(uint i=start; i<=now; i++)
-    {
-        if(list.contains(i))
+    if(mStatus == Node_Moving) return false;
+
+    //从现在开始进行遍历，如果预推个数满足要求，如果预推连续数满足要求，则定位为虚警
+    const TargetNode* node = this;
+    int empty_num = 0, continue_num = 0, total_num = 0;
+    while (node) {
+        total_num ++;
+        if(node->mDefRect->mSrcRect.realdata())
         {
             continue_num = 0;
-            continue;
+        } else
+        {
+            empty_num++;
+            continue_num++;
         }
-        continue_num++;
-        total_num++;
         if(continue_num == FALSE_ALARM_CONTINUE_EMPTY)
         {
             return true;
         }
-        if(total_num >= int(ceil(FALSE_ALARM_INDEX_SIZE * FALSE_ALARM_COUNTER_PERCENT)))
+        if(empty_num >= int(ceil(FALSE_ALARM_INDEX_SIZE * FALSE_ALARM_COUNTER_PERCENT)))
         {
             return true;
         }
+        if(total_num == FALSE_ALARM_INDEX_SIZE)  break;
+
+        node = node->mParent.data();
     }
+
     return false;
 }
 
-void TargetNode::clearPrediction()
-{
-    if(mPredictionNode) delete mPredictionNode;
-    mPredictionIndex = 0;
-    mPredictionTimes = 0;
-    mPredictionNode = 0;
-}
-
-void TargetNode::makePrediction(int videoIndex, uint videoTime, bool fixed_space_time)
-{
-    TargetNode *baseNode = getLastChild();
-    if(mPredictionTimes > 0)
-    {
-        baseNode = mPredictionNode;
-    }
-    //构造回波矩形
-    zchxRadarRectDef def(*mDefRect);
-    if(mPredictionNode) def.CopyFrom(*(mPredictionNode->mDefRect));
-    uint last_time = def.updatetime();
-    uint delta_time = videoTime - last_time;        //预推的时间间隔（S）
-    if(fixed_space_time) delta_time = 3;
-    double distance = def.sogms() * delta_time;
-    QGeoCoordinate src(def.center().latitude(), def.center().longitude());
-    QGeoCoordinate dest = src.atDistanceAndAzimuth(distance, def.cog());
-    def.mutable_center()->set_latitude(dest.latitude());
-    def.mutable_center()->set_longitude(dest.longitude());
-    def.set_updatetime(videoTime);
-    def.set_videocycleindex(videoIndex);
-    mPredictionIndex = videoIndex;
-    mPredictionTimes++;
-    if(mPredictionNode)
-    {
-        mPredictionNode->mDefRect->CopyFrom(def);
-    } else
-    {
-        mPredictionNode = new TargetNode(def, 0);
-    }
-    mPredictionNode->mSerialNum = mSerialNum;
-    mPredictionNode->mUpdateTime = videoTime;
-    mPredictionNode->mStatus = mStatus;
-}

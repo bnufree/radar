@@ -35,8 +35,9 @@ void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, cons
     QString message = QString("[%1] %2 [%3] [%4] %5").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
             .arg(text).arg(context.file).arg(context.line).arg(msg);
 
-    QString logPath = QCoreApplication::applicationDirPath() + QString("/log");
     QString appName = QCoreApplication::applicationName();
+    QString logPath = QCoreApplication::applicationDirPath() + QString("/log/") + appName;
+
     QDir dir(logPath);
     if(!dir.exists())
     {

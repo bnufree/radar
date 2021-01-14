@@ -39,7 +39,7 @@ private:
     void    process(const ZCHXRadarVideoProcessorData& task);//绘制回波
     QColor  getColor(double dValue);//通过振幅值获取对应颜色值
     bool    mergeVideoOfMultiTerms(QMap<int,RADAR_VIDEO_DATA>& result, const ZCHXRadarVideoProcessorData& task);
-    bool    drawOriginalVideoImage(QPaintDevice* result, const QMap<int,RADAR_VIDEO_DATA>& video);
+    bool    drawVideoImage(QPaintDevice* result, const QMap<int,RADAR_VIDEO_DATA>& video, const QColor& color = QColor());
 private:
     QColor                              m_objColor1;
     QColor                              m_objColor2;

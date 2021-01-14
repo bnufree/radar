@@ -33,7 +33,8 @@ FORMS += \
     zchxradarsettingswidget.ui \
     zchxradarfilterareasettingdlg.ui \
     zchxradarui.ui \
-    zchxradarwidget.ui
+    zchxradarwidget.ui \
+    zchxvideotermcolorsettingwidget.ui
 
 DISTFILES += \
     app.rc
@@ -58,7 +59,9 @@ HEADERS += \
     zchxradarsettingswidget.h \
     zchxradarfilterareasettingdlg.h \
     zchxradarui.h \
-    zchxradarwidget.h
+    zchxradarwidget.h \
+    zchxvideotermcolorsettingwidget.h \
+    zchxvideocolorsettingwidget.h
 
 SOURCES += \
     dialog_help.cpp \
@@ -81,4 +84,6 @@ SOURCES += \
     zchxradarsettingswidget.cpp \
     zchxradarfilterareasettingdlg.cpp \
     zchxradarui.cpp \
-    zchxradarwidget.cpp
+    zchxradarwidget.cpp \
+    zchxvideotermcolorsettingwidget.cpp \
+    zchxvideocolorsettingwidget.cpp

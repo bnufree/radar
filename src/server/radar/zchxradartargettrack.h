@@ -46,31 +46,26 @@ public slots:
 
 protected:
     void     run();
-private:
+public:
+    double      calcDis(const zchxRadarRectDef& p1, const zchxRadarRectDef& p2);
+    double      calcDis(zchxRadarRectDef* p1, zchxRadarRectDef* p2) {return calcDis(*p1, *p2);}
+    double      calcDis(const zchxRadarRectDef& p1, zchxRadarRectDef* p2) {return calcDis(p1, *p2);}
+    double      calcDis(zchxRadarRectDef* p1, const zchxRadarRectDef& p2) {return calcDis(*p1, p2);}
+    void        determineNodeStatus(TargetNode* node, bool term_check);
+    bool        calcNodeMostRelativeRect(TargetNode* node,  const zchxRadarRectDefList& list);
     void        CounterPossibleChildRect(QList<AreaNodeTable>& areaTableList, QMap<TargetNode*, zchxRadarRectDefList>& result ,const zchxRadarRectDefList& rects);
-    void        UpdateNodeWithPossibleTarget(QMap<TargetNode*, zchxRadarRectDefList>& counter, QList<int>& used_rect_list);
-    void        UpdateNodeWithExistVideoRect(QList<TargetNode*> list, QList<int>& used_index_list, const zchxRadarRectDefList& rects);
-    void        determineTargetStatus();
-    void        targetRecheck(int term);
-    void        PredictionMoveNode(int term, quint32 now);
+
 
     void        process(const zchxRadarRectDefList& task);
+
     void        processWithPossibleRoute(const zchxRadarRectDefList& task);
     void        appendUserDefObj(const zchxCommon::UserSpecifiedObj& obj);
     void        removeUserDefObj(const zchxCommon::UserSpecifiedObj& obj);
     void        updateParseSetting(const zchxVideoParserSettings& setting);
 
-    QList<AreaNodeTable>  calculateTargetTrackMode(double max_speed, quint32 now, double scan_time);
-    NodeStatus        checkRoutePathSts(QList<TargetNode*>& newRoueNodeList, const QList<TargetNode*>& path);
-    void        splitAllRoutesIntoTargets(TargetNode* node, TargetNode* routeNode);
-    void        deleteExpiredNode();
     void        outputTargets();
-    void        outputRoutePath();
-    void        updateTrackPointWithNode(zchxRadarSurfaceTrack& list, TargetNode* node, int* silent_num = 0);
-    void        updateRectMapWithNode(zchxRadarRectMap& map, TargetNode* node);
 
     int         getCurrentNodeNum();
-    void        appendNode(TargetNode* node, int source);
     bool        getTask(zchxRadarRectDefList& task);
     void        mergeRectTargetInDistance(zchxRadarRectDefList &temp_list, int target_merge_distance);
     Latlon      getMergeTargetLL(const zchxRadarRectDefList &list);
@@ -86,6 +81,7 @@ signals:
     void        signalSendRectData(const zchxRadarRectMap& map);
     void        signalSendRoutePath(const zchxRadarRouteNodes& list);
 public slots:
+    void        updateTrackPointWithNode(zchxRadarSurfaceTrack& list, TargetNode* node);
 
 private:
     QList<zchxRadarRectDefList>       mTaskList;

@@ -249,6 +249,8 @@ void zchxMapLoadThread::run()
                 {
 //                    url = QString("http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x=%1&y=%2&z=%3&s=Galil").arg(i).arg(k).arg(task.mZoom);
                     url = QString("http://mt1.google.cn/vt/lyrs=y&hl=zh-CN&x=%1&y=%2&z=%3&s=Gali").arg(i).arg(k).arg(task.mZoom);
+                    url = QString("http://t7.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX=%1&TILEROW=%2&TILECOL=%3&tk=e3b434f191257368fc43c5b011ab5911")
+                            .arg(task.mZoom).arg(k).arg(i);
 //                    qDebug()<<url;
                 }
 

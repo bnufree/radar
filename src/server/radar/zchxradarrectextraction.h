@@ -22,6 +22,7 @@ public:
 protected:
     bool  isVideoPolygonAvailable(const QPolygonF& poly);
 
+
 private:
     void  initFilterAreaInMector();
 
@@ -29,6 +30,7 @@ private:
     zchxVideoParserSettings         mSettings;
     QList<QPolygonF>                mOutFilterAreaMercatorList;
     QList<QPolygonF>                mInFilterAreaMercatorList;
+    QList<zchxRadarRectDefList>     mDrawVideoList;
 };
 
 #endif // ZCHXRECTEXTRACTIONTHREAD_H

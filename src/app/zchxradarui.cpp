@@ -1,6 +1,8 @@
 ﻿#include "zchxradarui.h"
 #include "ui_zchxradarui.h"
 #include "zchxradarchannelreportctrldlg.h"
+#include "zchxvideocolorsettingwidget.h"
+#include <QMessageBox>
 
 zchxRadarUi::zchxRadarUi(QWidget *parent) :
     QWidget(parent),
@@ -102,6 +104,12 @@ void zchxRadarUi::on_ok_parse_clicked()
     mDev.parse_param.scan_time = ui->scanCycleTime->value();
     mDev.parse_param.video_overlap_cnt = ui->video_or_count->value();
 
+    if(mDev.parse_param.video_overlap_cnt > mDev.parse_param.video_color_list.size())
+    {
+        QMessageBox::information(0,QString::fromUtf8("提示"),QString::fromUtf8("回波周期的颜色未设定！"),QString::fromUtf8("确认"));
+        return;
+    }
+
     emit signalNewParseSetting(mDev.toJson());
 
 }
@@ -120,4 +128,19 @@ void zchxRadarUi::on_ok_interface_clicked()
     channel.heart.ip = ui->heartIPLlineEdit->text().trimmed();
     channel.heart.port = ui->heartPortSpinBox->value();
     emit signalModifiedBaseAndChannel(mDev.toJson());
+}
+
+void zchxRadarUi::on_lap_color_set_clicked()
+{
+    //根据叠加数设定颜色
+    zchxVideoColorSettingWidget* w = new zchxVideoColorSettingWidget(ui->video_or_count->value(), mDev.parse_param.video_color_list);
+    w->setWindowTitle(QString::fromUtf8("回波颜色设定"));
+    w->setWindowFlags(Qt::CustomizeWindowHint|Qt::WindowCloseButtonHint);
+    w->setAttribute(Qt::WA_DeleteOnClose);
+    connect(w, &zchxVideoColorSettingWidget::signalSetFinished, this, [=](){
+        w->close();
+        mDev.parse_param.video_color_list = w->getColorList();
+    });
+    w->show();
+
 }

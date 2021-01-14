@@ -7,7 +7,7 @@ include($$ZCHX_3RD_PATH/protobuf/protobuf.pri)
 include($$ZCHX_3RD_PATH/opencv/opencv.pri)
 include($$ZCHX_3RD_PATH/common/zchx_common.pri)
 
-QT += core positioning gui network gui-private
+QT += core positioning gui network gui-private concurrent
 
 mingw{
     LIBS += -lws2_32 -lpsapi

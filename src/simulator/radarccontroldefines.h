@@ -100,40 +100,43 @@ struct PackedAddress {
   uint16_t port;
 };
 
-struct RadarReport_01B2 {
-  char serialno[16];  // ASCII serial number, zero terminated
-  uint8_t u1[18];
-  PackedAddress addr1;   // EC0608201970
-  uint8_t u2[4];         // 11000000
-  PackedAddress addr2;   // EC0607161A26
-  uint8_t u3[10];        // 1F002001020010000000
-  PackedAddress addr3;   // EC0608211971
-  uint8_t u4[4];         // 11000000
-  PackedAddress addr4;   // EC0608221972
-  uint8_t u5[10];        // 10002001030010000000
-  PackedAddress addr5;   // EC0608231973
-  uint8_t u6[4];         // 11000000
-  PackedAddress addr6;   // EC0608241974
-  uint8_t u7[4];         // 12000000
-  PackedAddress addr7;   // EC0608231975
-  uint8_t u8[10];        // 10002002030010000000
-  PackedAddress addr8;   // EC0608251976
-  uint8_t u9[4];         // 11000000
-  PackedAddress addr9;   // EC0608261977
-  uint8_t u10[4];        // 12000000
-  PackedAddress addr10;  // EC0608251978
-  uint8_t u11[10];       // 12002001030010000000
-  PackedAddress addr11;  // EC0608231979
-  uint8_t u12[4];        // 11000000
-  PackedAddress addr12;  // EC060827197A
-  uint8_t u13[4];        // 12000000
-  PackedAddress addr13;  // EC060823197B
-  uint8_t u14[10];       // 12002002030010000000
-  PackedAddress addr14;  // EC060825197C
-  uint8_t u15[10];       // 11000000
-  PackedAddress addr15;  // EC060828197D
-  uint8_t u16[10];       // 12000000
-  PackedAddress addr16;  // EC060825197E
+struct RadarReport_01B2
+{
+    uint16_t id;
+   char serialno[16];          // ASCII serial number, zero terminated
+   PackedAddress addr0;        // 0A 00 43 D9 01 01
+   uint8_t u1[12];             // 11000000
+   PackedAddress addr1;        // EC0608201970
+   uint8_t u2[4];              // 11000000
+   PackedAddress addr2;        // EC0607161A26
+   uint8_t u3[10];             // 1F002001020010000000
+   PackedAddress addr3;        // EC0608211971
+   uint8_t u4[4];              // 11000000
+   PackedAddress addr4;        // EC0608221972
+   uint8_t u5[10];             // 10002001030010000000
+   PackedAddress addrDataA;    // EC0608231973
+   uint8_t u6[4];              // 11000000
+   PackedAddress addrSendA;    // EC0608241974
+   uint8_t u7[4];              // 12000000
+   PackedAddress addrReportA;  // EC0608231975
+   uint8_t u8[10];             // 10002002030010000000
+   PackedAddress addrDataB;    // EC0608251976
+   uint8_t u9[4];              // 11000000
+   PackedAddress addrSendB;    // EC0608261977
+   uint8_t u10[4];             // 12000000
+   PackedAddress addrReportB;  // EC0608251978
+   uint8_t u11[10];            // 12002001030010000000
+   PackedAddress addr11;       // EC0608231979
+   uint8_t u12[4];             // 11000000
+   PackedAddress addr12;       // EC060827197A
+   uint8_t u13[4];             // 12000000
+   PackedAddress addr13;       // EC060823197B
+   uint8_t u14[10];            // 12002002030010000000
+   PackedAddress addr14;       // EC060825197C
+   uint8_t u15[4];             // 11000000
+   PackedAddress addr15;       // EC060828197D
+   uint8_t u16[4];             // 12000000
+   PackedAddress addr16;       // EC060825197E
 };
 
 

@@ -12,6 +12,23 @@
 using namespace std;
 using namespace cv;
 
+double polygonArea(const QPolygon& poly)
+{
+    vector<Point> contour;
+    for(int i=0; i<poly.size(); i++)
+    {
+        QPoint pnt = poly[i];
+        contour.push_back(Point2f(pnt.x(), pnt.y()));
+    }
+
+    return contourArea(contour);
+}
+
+double polygonArea(const QPolygonF& poly)
+{
+    return polygonArea(poly.toPolygon());
+}
+
 
 cv::Mat QImage2cvMat(QImage image)
 {
@@ -186,11 +203,16 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     {
         Mat connImage = Mat ::zeros(src.size(),CV_8U);
         drawContours(connImage, contours, -1, Scalar(255, 0, 255));
-        saveImg(opencv_dir, "result", connImage);
-        saveImg(opencv_dir, "src", src);
-        saveImg(opencv_dir, "blur", blurImg);
-        saveImg(opencv_dir, "gray", gray_src);
-        saveImg(opencv_dir, "binary", binary);
+//        saveImg(opencv_dir, "src", src);
+//        saveImg(opencv_dir, "blur", blurImg);
+//        saveImg(opencv_dir, "gray", gray_src);
+//        saveImg(opencv_dir, "binary", binary);
+//        saveImg(opencv_dir, "result", connImage);
+        saveImg(opencv_dir, "1", src);
+        saveImg(opencv_dir, "2", blurImg);
+        saveImg(opencv_dir, "3", gray_src);
+        saveImg(opencv_dir, "4", binary);
+        saveImg(opencv_dir, "5", connImage);
     }
     qDebug()<<"video countours size before filter:"<<contours.size();
     //提取轮廓点
@@ -306,7 +328,14 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         rectDef.set_cog(0.0);
         rectDef.set_sogknot(0.0);
         rectDef.set_videocycleindex(data.mTermIndex);
-        list.append(rectDef);
+
+        zchxRadarRectDef wrap;
+        wrap.mSrcRect.CopyFrom(rectDef);
+        wrap.mPixShapePnts = pixel_polygonF;
+        wrap.mArea = area;
+        wrap.mPixCenter = grave_pnt;
+        wrap.mPosConveter = posConverter;
+        list.append(wrap);
 
     }
 
@@ -358,6 +387,40 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     if(mSettings.opencv_img)
     {
         saveImg(opencv_dir, "final", QImage2cvMat(result));
+    }
+
+    //开始画连续5个周期的回波图形
+    if(0)
+    {
+        mDrawVideoList.append(list);
+        if(mDrawVideoList.size() > 5) mDrawVideoList.takeFirst();
+        QImage objPixmap(img_width, img_height, QImage::Format_ARGB32);
+        objPixmap.fill(Qt::transparent);//用透明色填充
+        QPainter painter;
+        painter.begin(&objPixmap);
+        QList<QColor> color_list;
+        color_list<<QColor(Qt::red)<<QColor(Qt::green)<<QColor(Qt::yellow)<<QColor(Qt::magenta)<<QColor(Qt::blue);
+        for(int i=0; i<mDrawVideoList.size(); i++)
+        {
+            QColor color = color_list[i];
+            color.setAlpha(100);
+            painter.setBrush(color);
+            foreach (zchxRadarRectDef rect, mDrawVideoList[i]) {
+                double lat = rect.mSrcRect.center().latitude();
+                double lon = rect.mSrcRect.center().longitude();
+                QPointF pixel = posConverter.Latlon2Pixel(Latlon(lat, lon));
+                painter.drawEllipse(pixel, 3, 3);
+            }
+        }
+        painter.end();
+
+        QDir path(QString("%1/temp").arg(QCoreApplication::applicationDirPath()));
+        if(!path.exists())
+        {
+            path.mkpath(path.absolutePath());
+        }
+        QString filename = QString("%1/%2.png").arg(path.absolutePath()).arg(QDateTime::currentMSecsSinceEpoch());
+        imwrite(filename.toStdString(), QImage2cvMat(objPixmap));
     }
 
     return list.size() != 0;

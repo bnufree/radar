@@ -581,6 +581,34 @@ public:
         mCenterLL.lon = center.lon;
         mRangeFactor = range_facor;
     }
+    zchxPosConverter()
+    {
+        mCenterLL.lat = 0.0;
+        mCenterLL.lon = 0.0;
+        mRangeFactor = 0.0;
+    }
+
+    zchxPosConverter(const zchxPosConverter& other)
+    {
+        mCenterLL.lat = other.mCenterLL.lat;
+        mCenterLL.lon = other.mCenterLL.lon;
+        mRangeFactor = other.mRangeFactor;
+        mCenterPnt = other.mCenterPnt;
+    }
+
+    zchxPosConverter& operator=(const zchxPosConverter& other)
+    {
+        if(this != &other)
+        {
+            mCenterLL.lat = other.mCenterLL.lat;
+            mCenterLL.lon = other.mCenterLL.lon;
+            mRangeFactor = other.mRangeFactor;
+            mCenterPnt = other.mCenterPnt;
+        }
+        return *this;
+    }
+
+
     Latlon pixel2Latlon(const QPointF& pix)
     {
         double dkx = mRangeFactor * (-(pix.y() -  mCenterPnt.y()));
@@ -602,7 +630,7 @@ public:
         return mCenterPnt + QPointF(dy, -dx);
     }
 
-private:
+public:
     QPointF     mCenterPnt;
     Latlon      mCenterLL;
     double      mRangeFactor;
@@ -657,7 +685,25 @@ typedef     QMap<int,zchxTrackPoint>                        zchxTrackPointMap;
 typedef     QList<zchxTrackPoint>                           zchxTrackPointList;
 typedef     com::zhichenhaixin::proto::RadarRect            zchxRadarRect;
 typedef     QList<zchxRadarRect>                            zchxRadarRectList;
-typedef     com::zhichenhaixin::proto::RadarRectDef         zchxRadarRectDef;
+
+typedef     com::zhichenhaixin::proto::RadarRectDef         zchxRadarRectDefSrc;
+struct zchxRadarRectDef{
+    com::zhichenhaixin::proto::RadarRectDef                 mSrcRect;
+    QPolygonF                                               mPixShapePnts;
+    double                                                  mArea = 0;
+    QPointF                                                 mPixCenter;
+    zchxPosConverter                                        mPosConveter;
+
+    void CopyFrom(const zchxRadarRectDef& other)
+    {
+        mSrcRect.CopyFrom(other.mSrcRect);
+        mPixShapePnts = other.mPixShapePnts;
+        mArea   = other.mArea;
+        mPixCenter = other.mPixCenter;
+        mPosConveter = other.mPosConveter;
+    }
+};
+
 typedef     QList<zchxRadarRectDef>                         zchxRadarRectDefList;
 typedef     QMap<int,zchxRadarRect>                         zchxRadarRectMap;
 typedef     com::zhichenhaixin::proto::Latlon               zchxLatlon;
