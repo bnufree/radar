@@ -16,7 +16,7 @@ TargetNode::TargetNode()
     mUpdateTime = QDateTime::currentDateTime().toTime_t();
     mLastLostTime = 0;
     mVideoTerm = 0;
-    mLevel = 1;
+    mLastPrecitonTerm = 1;
     mChild = 0;
 }
 TargetNode::TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode> parentNode)
@@ -26,14 +26,14 @@ TargetNode::TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode>
     mParent = parentNode;
     mSerialNum = 0;
     mStatus = Node_UnDef;
-    mLevel = 1;
+    mLastPrecitonTerm = 0;
     mChild = 0;
     if(mParent)
     {
         mStatus = mParent->mStatus;
         mSerialNum = mParent->mSerialNum;
-        mLevel = mParent->mLevel + 1;
         mParent->mChild = this;
+        mLastPrecitonTerm = mParent->mLastPrecitonTerm;
     }
     mVideoTerm = other.mSrcRect.videocycleindex();
     mLastLostTime = 0;
@@ -119,11 +119,24 @@ TargetNode* TargetNode::topNode()
     return parent;
 }
 
-
-int TargetNode::getDepth()
+QList<TargetNode*> TargetNode::path()
 {
-    return mLevel;
+    QList<TargetNode*>  list;
+    TargetNode *node =  this;
+    while (node) {
+        list.append(node);
+        if(node->mParent)
+        {
+            node = node->mParent.data();
+        } else
+        {
+            break;
+        }
+    }
+
+    return list;
 }
+
 
 bool  TargetNode::isTopNode() const
 {

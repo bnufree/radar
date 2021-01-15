@@ -199,5 +199,9 @@
         <file>element/余晖大2.png</file>
         <file>element/余晖小.png</file>
         <file>element/余晖小2.png</file>
+        <file>radarType/雷达大.png</file>
+        <file>radarType/雷达点迹.png</file>
+        <file>radarType/雷达小.png</file>
+        <file>radarType/雷达中.png</file>
     </qresource>
 </RCC>

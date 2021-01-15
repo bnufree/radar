@@ -693,6 +693,9 @@ void zchxMapWidget::mousePressEvent(QMouseEvent *e)
                         emit signalSendCurPosAsRadarCenter(ll.lat, ll.lon);
 
                     });
+                    menu.addAction(tr("测距"),this, [=](){
+                        setETool2DrawDistance();
+                    });
 		 //雷达目标回波控制显示
 //                    if(m_mapLayerMgr->isLayerVisible(ZCHX::LAYER_RADARRECT))
 //                    {

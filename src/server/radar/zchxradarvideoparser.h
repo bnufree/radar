@@ -78,7 +78,7 @@ private:
     QTime                           mCounterT;
     int                             mTermSpokeCount;
     int                             mNextSpoke;
-    int                             mTermIndex;
+    uint                             mTermIndex;
 };
 
 #endif // ZCHXRADARVIDEOPARSER_H

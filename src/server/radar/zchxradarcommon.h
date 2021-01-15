@@ -256,7 +256,7 @@ struct zchxRadarVideoSourceData
     QMap<int,RADAR_VIDEO_DATA>  m_RadarVideo;
 //    double                      m_Range;
     quint32                     m_TimeStamp;
-    int                         m_IndexT;
+    uint                         m_IndexT;
 };
 typedef QList<zchxRadarVideoSourceData>   zchxRadarVideoSourceDataList;
 

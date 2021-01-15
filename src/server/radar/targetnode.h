@@ -32,7 +32,7 @@ public:
     uint                                        mLastLostTime;      //目标丢失的时间
     zchxRadarRectDefList                        mRelativeRectList;
     uint                                        mVideoTerm;
-    int                                         mLevel;
+    uint                                        mLastPrecitonTerm;
     TargetNode*                                 mChild;
 
 
@@ -46,7 +46,7 @@ public:
     Latlon getReferencePoint();
     void updateSerialNum(int num);
     TargetNode* topNode();
-    int     getDepth();
+    QList<TargetNode*> path();
     bool  isTopNode() const;
     QList<uint>  getVideoTermIndexList();
     bool  isFalseAlarm() const;

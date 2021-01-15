@@ -74,6 +74,7 @@ public:
     void        dumpTargetDistance(const QString &tag, double merge_dis);
     void        checkTargetRectAfterUpdate(double merge_dis);
     bool        isRectAreaContainsPoint(const zchxRadarRectDef& rect, double lat, double lon);
+    bool        preCheckTargetValid(TargetNode* src, const zchxRadarRectDef& target);
 
 
 signals:

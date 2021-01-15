@@ -343,7 +343,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         //cout<<"dAzimuth:"<<dAzimuth<<"angle_raw"<<angle_raw<<"uHeading"<<uHeading; //1_扫描方位,angle_raw(0-2047),uHeading(180)
 
         //赋值振幅
-#undef DOPPLER_USED;
+//#undef DOPPLER_USED;
 #ifndef DOPPLER_USED
         for (int range = 0; range < mParseParam.cell_num; range++) {
             lineData.append((int)(line->data[range]));

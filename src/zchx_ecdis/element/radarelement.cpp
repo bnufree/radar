@@ -282,6 +282,25 @@ void RadarPointElement::initFromSettings()
     //qDebug()<<"radar ini seetings."<<mDrawAsAis<<mRadarShape<<mFillingColor.name()<<mTextColor.name()<<mConcernColor.name()<<mBorderColor.name();
 }
 
+QString RadarPointElement::getRadarImgeBySize()
+{
+    if(!m_data.directionConfirmed) return QString(":/radarType/雷达点迹.png");
+    if (m_data.diameter <= 80)
+    {
+        return QString(":/radarType/雷达小.png");
+    }
+    else if (m_data.diameter > 80 && m_data.diameter <= 200)
+    {
+        return QString(":/radarType/雷达大.png");
+    }
+    else if (m_data.diameter > 200)
+    {
+        return QString(":/radarType/雷达大.png");
+    }
+
+    return QString(":/radarType/雷达大.png");
+}
+
 void RadarPointElement::drawElement(QPainter *painter)
 {    
     if(!painter || !mView->getLayerMgr()->isLayerVisible(ZCHX::LAYER_RADAR_CURRENT) || !mView->framework())
@@ -361,7 +380,13 @@ void RadarPointElement::drawElement(QPainter *painter)
                 painter->drawRect(pos.x()-3,pos.y()-5,6,10);
             } else
             {
-                painter->drawEllipse(pos.x() - sideLen / 2, pos.y() - sideLen / 2, sideLen, sideLen);
+//                painter->drawEllipse(pos.x() - sideLen / 2, pos.y() - sideLen / 2, sideLen, sideLen);
+                QString imgUrl = getRadarImgeBySize();
+                if (!imgUrl.isEmpty())
+                {
+                    QPixmap pixmap(imgUrl);
+                    painter->drawPixmap(pos.x() - pixmap.width() / 2, pos.y() - pixmap.height() / 2, pixmap.width(), pixmap.height(), pixmap);
+                }
             }
         }
 
@@ -484,7 +509,8 @@ void RadarPointElement::showToolTip(const QPoint &pos)
     pos_text += QObject::tr("纬度: %1\n").arg(FLOAT_STRING(info.getLon(), 6));;
     pos_text += QObject::tr("更新时间: %1\n").arg(QDateTime::fromTime_t(info.currentRect.updateTime).toString("MM/dd/yyyy HH:mm:ss"));
     pos_text += QObject::tr("方位角（正北方向）: %1\n").arg(FLOAT_STRING(info.currentRect.cog, 0));
-    pos_text += QObject::tr("速度(节): %1").arg(FLOAT_STRING(info.currentRect.sogKnot, 2));
+    pos_text += QObject::tr("速度(节): %1\n").arg(FLOAT_STRING(info.currentRect.sogKnot, 2));
+    pos_text += QObject::tr("长度(米): %1").arg(FLOAT_STRING(info.currentRect.boundRect.diameter, 2));
     QToolTip::showText(pos, pos_text);
 }
 

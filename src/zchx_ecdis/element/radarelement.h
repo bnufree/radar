@@ -20,6 +20,7 @@ public:
     };
 
     std::pair<double, double> getPoint();
+    QString getRadarImgeBySize();
 
     const ZCHX::Data::ITF_RadarPoint& getData() const;
     void setData(const ZCHX::Data::ITF_RadarPoint& data);

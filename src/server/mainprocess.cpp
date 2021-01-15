@@ -43,7 +43,7 @@ bool MainProcess::isDataServerOk()
 bool MainProcess::start()
 {
     //获取配置文件
-    qDebug()<<"start server now. please wait for initlization from file:"<<mCfgMgr->getCfgFile();
+    qDebug()<<"start server 20210115. please wait for initlization from file:"<<mCfgMgr->getCfgFile();
     if(mCfgMgr->isError())
     {
         qDebug()<<"error occured while reading config file, please recheck config file...";
