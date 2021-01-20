@@ -8,6 +8,7 @@
 #include "targetnode.h"
 #include "zchxdatadef.h"
 #include <QThread>
+#include <QThreadPool>
 
 
 
@@ -25,6 +26,8 @@ struct AreaNodeTable{
 };
 
 #define     TARGET_CONFIRM_NODE_COUNT         5
+
+
 
 
 class zchxRadarTargetTrack : public QThread
@@ -47,6 +50,7 @@ public slots:
 protected:
     void     run();
 public:
+
     double      calcDis(const zchxRadarRectDef& p1, const zchxRadarRectDef& p2);
     double      calcDis(zchxRadarRectDef* p1, zchxRadarRectDef* p2) {return calcDis(*p1, *p2);}
     double      calcDis(const zchxRadarRectDef& p1, zchxRadarRectDef* p2) {return calcDis(p1, *p2);}
@@ -69,12 +73,15 @@ public:
     bool        getTask(zchxRadarRectDefList& task);
     void        mergeRectTargetInDistance(zchxRadarRectDefList &temp_list, int target_merge_distance);
     Latlon      getMergeTargetLL(const zchxRadarRectDefList &list);
+    void        changeTargetPixCenter(const QPoint &center, zchxRadarRectDef *cur);
     void        changeTargetLL(const Latlon &ll, zchxRadarRectDef &cur);
     bool        isDirectionChange(double src, double target);
     void        dumpTargetDistance(const QString &tag, double merge_dis);
     void        checkTargetRectAfterUpdate(double merge_dis);
     bool        isRectAreaContainsPoint(const zchxRadarRectDef& rect, double lat, double lon);
     bool        preCheckTargetValid(TargetNode* src, const zchxRadarRectDef& target);
+    double      calNodeMoveDis(TargetNode* node);
+    bool        isSamePoint(TargetNode* src, const zchxRadarRectDef& target);
 
 
 signals:
@@ -103,6 +110,7 @@ private:
     bool                        mIsOver;
     quint32                     mLastVideoDataTime;
     double                      mMaxSpeed;
+    QThreadPool                 *mThreadPool;
 
 };
 

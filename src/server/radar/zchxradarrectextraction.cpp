@@ -174,7 +174,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     int img_width = data.mSrcImg.width();
     int img_height = data.mSrcImg.height();
     //遍历获取到的外形点列,取得目标的中心点
-    QList<QPolygonF> skip_poly_list;                //过滤区域对应的图形外框
+    QList<QPolygon> skip_poly_list;                //过滤区域对应的图形外框
 
     QTime t;
     t.start();
@@ -222,12 +222,13 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         vector<Point> pnts_opencv = contours[i];
 
         //获取目标的外形点列
-        QPolygonF pixel_polygonF, mercator_polygonF; //目标对应的像素坐标外形点列，墨卡托坐标外形点列
+        QPolygonF mercator_polygonF; //目标对应的像素坐标外形点列，墨卡托坐标外形点列
+        QPolygon pixel_polygon;
         zchxLatlonList  latlon_ploygonF;             //目标对应的经纬度坐标外形点列
         for(int k=0; k<pnts_opencv.size(); k++)
         {
             Point2i pnt = pnts_opencv[k];
-            pixel_polygonF.append(QPointF(pnt.x, pnt.y));
+            pixel_polygon.append(QPoint(pnt.x, pnt.y));
             Latlon ll = posConverter.pixel2Latlon(QPointF(pnt.x, pnt.y));
             latlon_ploygonF.append(ll);
             mercator_polygonF.append(latlonToMercator(ll.lat, ll.lon).toPointF());
@@ -235,7 +236,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         //检查回波图形是否是在禁止区域内,或者禁止区域重叠
         if(!isVideoPolygonAvailable(mercator_polygonF))
         {
-            skip_poly_list.append(pixel_polygonF);
+            skip_poly_list.append(pixel_polygon);
             continue;
         }
         //计算回波图形的面积,目标的长度和重心位置,检查目标的设定是否设定的阈值范围内
@@ -244,7 +245,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         area = area * data.mRangeFactor * data.mRangeFactor;
         if(area <= mSettings.user_video_parse.area.min || area >= mSettings.user_video_parse.area.max)
         {
-            skip_poly_list.append(pixel_polygonF);
+            skip_poly_list.append(pixel_polygon);
             continue;
         }
         //计算雷达目标的长度和宽度,将矩形块二者的最大者作为目标的长度
@@ -254,7 +255,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         double target_length = qMax(width, height) * data.mRangeFactor;
         if(target_length <= mSettings.user_video_parse.lenth.min || target_length >= mSettings.user_video_parse.lenth.max)
         {
-            skip_poly_list.append(pixel_polygonF);
+            skip_poly_list.append(pixel_polygon);
             continue;
         }
         //计算重心
@@ -285,14 +286,14 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         QTransform transform;
         transform.scale(0.4, 0.4);
         transform.translate(-cx, -cy);
-        QPolygonF new_poly = transform.map(pixel_polygonF);
+        QPolygon new_poly = transform.map(pixel_polygon);
         QSizeF fixSize = new_poly.boundingRect().size();
         rectDef.mutable_fixedimg()->set_width(qRound(fixSize.width()));
         rectDef.mutable_fixedimg()->set_height(qRound(fixSize.height()));
-        foreach (QPointF point, new_poly) {
+        foreach (QPoint point, new_poly) {
             com::zhichenhaixin::proto::PixelPoint *pnt = rectDef.mutable_fixedimg()->add_points();
-            pnt->set_x(qRound(point.x()));
-            pnt->set_y(qRound(point.y()));
+            pnt->set_x(point.x());
+            pnt->set_y(point.y());
         }
         //设定目标外接矩形
         rectDef.mutable_boundrect()->set_diameter(target_length);
@@ -331,9 +332,9 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
 
         zchxRadarRectDef wrap;
         wrap.mSrcRect.CopyFrom(rectDef);
-        wrap.mPixShapePnts = pixel_polygonF;
+        wrap.mShapePnts = pixel_polygon;
         wrap.mArea = area;
-        wrap.mPixCenter = grave_pnt;
+        wrap.mCenter = grave_pnt;
         wrap.mPosConveter = posConverter;
         list.append(wrap);
 

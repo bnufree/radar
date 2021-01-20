@@ -143,18 +143,29 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
     {
         qDebug()<<"now wait for processor terminate...";
         mVideoProcessor->setOver(true);
+        int i = 0;
+        while (!mVideoProcessor->isFinished()) {
+            qDebug()<<"wait for video processor end "<<i++;
+            QThread::currentThread()->msleep(50);
+        }
         mVideoProcessor->terminate();
         mVideoProcessor->wait();
-        qDebug()<<"start delete ...";
+        qDebug()<<"start delete video processor ...";
         delete mVideoProcessor;
         mVideoProcessor = NULL;
     }
+
     if(mTargetTrackProcessor)
     {
+        int i = 0;
         mTargetTrackProcessor->setOver(true);
+        while (!mTargetTrackProcessor->isFinished()) {
+            qDebug()<<"wait track processor end "<<i++;
+            QThread::currentThread()->msleep(50);
+        }
         mTargetTrackProcessor->terminate();
         mTargetTrackProcessor->wait();
-        qDebug()<<"start delete ...";
+        qDebug()<<"start delete track processor ...";
         delete mTargetTrackProcessor;
         mTargetTrackProcessor = NULL;
     }
@@ -168,8 +179,10 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
         }
         qDebug()<<"terminate parse thread...";
         mWorkThread->terminate();
+        mWorkThread->wait();
         qDebug()<<"delete parse thread...";
-        mWorkThread->deleteLater();
+        delete mWorkThread;
+        mWorkThread = NULL;
     }
     qDebug()<<"video parse end now....";
 }

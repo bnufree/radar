@@ -20,6 +20,46 @@ enum NodeStatus{
     Node_GAP_ABNORMAL,
 };
 
+class LeastSquare
+{
+public :
+    LeastSquare(const QList<double>& x, const QList<double>& y)
+    {
+        double t1=0, t2=0, t3=0, t4=0;
+        for(int i=0; i<x.size(); ++i)
+        {
+            t1 += x[i]*x[i];
+            t2 += x[i];
+            t3 += x[i]*y[i];
+            t4 += y[i];
+        }
+        a = (t3*x.size() - t2*t4) / (t1*x.size() - t2*t2);
+        b = (t1*t4 - t2*t3) / (t1*x.size() - t2*t2);
+    }
+
+    LeastSquare(const QList<QPointF> & pnts)
+    {
+        double t1=0, t2=0, t3=0, t4=0;
+        for(int i=0; i<pnts.size(); ++i)
+        {
+            double  x = pnts[i].x();
+            double  y = pnts[i].y();
+            t1 += x * x;
+            t2 += x;
+            t3 += x*y;
+            t4 += y;
+        }
+        a = (t3*pnts.size() - t2*t4) / (t1*pnts.size() - t2*t2);
+        b = (t1*t4 - t2*t3) / (t1*pnts.size() - t2*t2);
+    }
+
+    double getY(double x) {return a*x+b;}
+
+private:
+    double a;
+    double b;
+};
+
 //目标状态确定为静止，则目标路径上就始终只有一个点
 struct TargetNode
 {

@@ -30,7 +30,7 @@ public:
     RadarNode(const zchxRadarRectDef& other)
     {
         mRect.mSrcRect.CopyFrom(other.mSrcRect);
-        mRect.mPixShapePnts = other.mPixShapePnts;
+        mRect.mShapePnts = other.mShapePnts;
         mIsOk = false;
     }
 

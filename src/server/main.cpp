@@ -72,9 +72,9 @@ void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, cons
         std::cout <<"open file failed...........";
     }
     mutex.unlock();
-    message = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss  ");
-    std::cout << message.toStdString();
-    std::cout << msg.toUtf8().toStdString() <<std::endl;
+//    message = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss  ");
+//    std::cout << message.toStdString();
+    std::cout << message.toUtf8().toStdString() <<std::endl;
 }
 
 int main(int argc, char *argv[])

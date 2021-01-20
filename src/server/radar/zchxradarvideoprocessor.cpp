@@ -67,7 +67,7 @@ void ZCHXRadarVideoProcessor::run()
         zchxTimeElapsedCounter counter("process video image");
         process(task);
     }
-    qDebug()<<"now thread finished...";
+    qDebug()<<"now ZCHXRadarVideoProcessor thread finished...";
 }
 
 QColor ZCHXRadarVideoProcessor::getColor(double dValue)
@@ -339,7 +339,7 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
 
     if(mParse.user_video_parse.use_original_video_img) emit signalSendVideoPixmap(objPixmap);
 
-    if(mTargetExt)
+    if(mTargetExt && !mIsover)
     {
         //对图片进行处理，主要是包括回波过滤，然后提取目标外形点列
         double range_factor = task.first().m_RadarVideo.first().m_dRangeFactor;
