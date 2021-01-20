@@ -634,6 +634,28 @@ void RadarRectGlowElement::drawRadarRect(QPainter *painter,
 
 //}
 
+QImage imageTransparent(const QImage& src, int alpha)
+{
+    QImage image(src);
+    union myrgb
+    {
+        uint rgba;
+        uchar rgba_bits[4];
+    };
+    myrgb* mybits =(myrgb*) image.bits();
+    int len = image.width()*image.height();
+    while(len --> 0)
+    {
+        if(mybits->rgba_bits[3] != 0)
+        {
+            mybits->rgba_bits[3] =  alpha;
+        }
+        mybits++;
+    }
+    return image;
+}
+
+
 void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
 {
     //这里开始输出目标的历史轨迹,再输出目标实际的矩形
@@ -668,8 +690,8 @@ void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
             painter->rotate((int)(his.cog + angleFromNorth) % 360);
             painter->translate(-pos.x(), -pos.y());
 
-            QPixmap devicePix;
-            devicePix.load(img);
+            int alpha =  (size - i) * 255 / size;
+            QPixmap devicePix = QPixmap::fromImage(imageTransparent(QImage(img, "PNG"), alpha));
             QRect  destRect(0, 0, devicePix.width(), devicePix.height());
             destRect.moveCenter(pos);
             painter->drawPixmap(destRect, devicePix);

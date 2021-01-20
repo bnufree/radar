@@ -15,6 +15,7 @@ protected:
 
 signals:
     void signalSendContents(const QByteArray& bytes, int len);
+    void signalSimulationEnd();
 public slots:
 
 private:

@@ -510,7 +510,8 @@ void RadarPointElement::showToolTip(const QPoint &pos)
     pos_text += QObject::tr("更新时间: %1\n").arg(QDateTime::fromTime_t(info.currentRect.updateTime).toString("MM/dd/yyyy HH:mm:ss"));
     pos_text += QObject::tr("方位角（正北方向）: %1\n").arg(FLOAT_STRING(info.currentRect.cog, 0));
     pos_text += QObject::tr("速度(节): %1\n").arg(FLOAT_STRING(info.currentRect.sogKnot, 2));
-    pos_text += QObject::tr("长度(米): %1").arg(FLOAT_STRING(info.currentRect.boundRect.diameter, 2));
+    pos_text += QObject::tr("长度(米): %1\n").arg(FLOAT_STRING(info.currentRect.boundRect.diameter, 2));
+    pos_text += QObject::tr("运动(米): %1").arg(FLOAT_STRING(info.currentRect.referWidth, 2));
     QToolTip::showText(pos, pos_text);
 }
 
