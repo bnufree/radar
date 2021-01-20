@@ -16,9 +16,9 @@ exists( $${ZCHX_OPENCV_PATH} ){
                         -lopencv_imgcodecs \
                         -lopencv_imgproc \
 
-        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_core.so.4.2
-        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_imgcodecs.so.4.2
-        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_imgproc.so.4.2
+        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_core.so*
+        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_imgcodecs.so*
+        ZCHX_OPENCV_install.files += $${ZCHX_OPENCV_PATH}/lib/libopencv_imgproc.so*
 
         ZCHX_OPENCV_install.path = $${IDE_APP_PATH}/
         INSTALLS += ZCHX_OPENCV_install

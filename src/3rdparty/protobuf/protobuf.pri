@@ -11,7 +11,7 @@ exists( $${ZCHX_PROTOBUF_PATH} ) {
     INCLUDEPATH += $${ZCHX_PROTOBUF_HEADERS}
     unix{
         LIBS += -L$${ZCHX_PROTOBUF_LIBS} -lprotobuf
-        ProtoBuf_install.files += $${ZCHX_PROTOBUF_PATH}/lib/libprotobuf.so.23
+        ProtoBuf_install.files += $${ZCHX_PROTOBUF_PATH}/lib/libprotobuf.so*
         ProtoBuf_install.path = $${IDE_APP_PATH}/
         INSTALLS += ProtoBuf_install
     } else {

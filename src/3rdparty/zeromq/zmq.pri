@@ -11,7 +11,7 @@ exists( $${ZCHX_ZMQ_PATH} ) {
     INCLUDEPATH += $${ZCHX_ZMQ_HEADERS}
     unix{
         LIBS +=-L$${ZCHX_ZMQ_LIBS} -lzmq
-        Zmq_install.files += $${ZCHX_ZMQ_PATH}/lib/libzmq.so.3
+        Zmq_install.files += $${ZCHX_ZMQ_PATH}/lib/libzmq.so*
         Zmq_install.path = $$IDE_APP_PATH
         INSTALLS += Zmq_install
     } else {

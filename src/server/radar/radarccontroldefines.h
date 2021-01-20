@@ -1,8 +1,12 @@
 ﻿#ifndef RADARCCONTROLDEFINES_H
 #define RADARCCONTROLDEFINES_H
 
+#include <stdint.h>
+
 #ifdef Q_OS_WIN
 #include <winsock2.h>
+#else
+#include <arpa/inet.h>
 #endif
 
 #pragma pack(push,1)
@@ -135,7 +139,6 @@ struct RadarReport_01B2 {
   uint8_t u16[10];       // 12000000
   PackedAddress addr16;  // EC060825197E
 };
-
 
 #pragma pack(pop)
 

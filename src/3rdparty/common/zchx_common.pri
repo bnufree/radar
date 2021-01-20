@@ -11,7 +11,7 @@ exists( $${ZCHX_COMMON_PATH} ) {
     INCLUDEPATH += $${ZCHX_COMMON_HEADERS}
     unix{
         LIBS +=-L$${ZCHX_COMMON_LIBS} -lzchx_common
-        ZCHX_COMMON_install.files += $${ZCHX_COMMON_PATH}/lib/libzchx_common.so.1
+        ZCHX_COMMON_install.files += $${ZCHX_COMMON_PATH}/lib/libzchx_common.so*
     } else {
         LIBS +=-L$${ZCHX_COMMON_LIBS} -llibzchx_common
         ZCHX_COMMON_install.files += $${ZCHX_COMMON_PATH}/lib/zchx_common.dll
