@@ -61,7 +61,7 @@ bool MainProcess::start()
     mMsgSvrThrd->start();
     connect(mCfgMgr, SIGNAL(signalNewPublishSettings(zchxCommon::zchxPublishSettingsList)),
             PUBLISH_INS, SIGNAL(signalInitPublish(zchxCommon::zchxPublishSettingsList)));
-    emit mCfgMgr->signalNewPublishSettings(mCfgMgr->getPubSettings());
+//    emit mCfgMgr->signalNewPublishSettings(mCfgMgr->getPubSettings());
 //    mPublishMgr->initFromCfg(mCfgMgr->getPubSettings());
 
     //开启雷达获取雷达数据
@@ -70,24 +70,42 @@ bool MainProcess::start()
             mDevMgr, SLOT(updateDeviceList(zchxCommon::zchxRadarDeviceList)));
     connect(mDevMgr, SIGNAL(signalSendRecvIP(QString,int)),  mCfgMgr, SLOT(updateDevRecvIP(QString,int)));
     connect(mDevMgr, SIGNAL(signalSendHeadChangedData(int,int,int)), mCfgMgr, SLOT(updateChannelHeadData(int,int,int)));
-    emit mCfgMgr->signalNewRadarSettings(mCfgMgr->getDevList());
+//    emit mCfgMgr->signalNewRadarSettings(mCfgMgr->getDevList());
     return true;
 }
 
 void MainProcess::slotRecvPublishPortStartStatus(const zchxCommon::zchxPortStatusList &list)
 {
-    qDebug()<<"recv sever port start status.";
+    qDebug()<<"recv publish port start status.";
     foreach (zchxCommon::zchxPortStatus data, list) {
         qDebug()<<"server port start with status:"<<data.port<<data.sts<<data.topic;
+        if(!data.sts)
+        {
+            qDebug()<<"server start failed. please restart now....";
+            return ;
+        }
     }
 
     if(mCfgMgr) mCfgMgr->updateSocketStatus(list);
+
+    //开始启动雷达
+    qDebug()<<"start init radar device....";
+    emit mCfgMgr->signalNewRadarSettings(mCfgMgr->getDevList());
 
 }
 
 void MainProcess::slotRecvMsgPortStatus(const zchxCommon::zchxPortStatus &data)
 {
-    slotRecvPublishPortStartStatus(zchxCommon::zchxPortStatusList(data));
+    qDebug()<<QString("main server thread port status. %1:%2").arg(data.port).arg(data.sts);
+    if(mCfgMgr) mCfgMgr->updateSocketStatus(data);
+    if(!data.sts)
+    {
+        qDebug()<<"server start failed. please restart now....";
+        return ;
+    }
+
+    //开始启动数据传输服务
+    emit mCfgMgr->signalNewPublishSettings(mCfgMgr->getPubSettings());
 }
 
 void MainProcess::updateFilterStatus(bool sts)

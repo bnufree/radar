@@ -48,7 +48,7 @@ zchxRadarTargetTrack::~zchxRadarTargetTrack()
     if(mThreadPool)
     {
         mThreadPool->clear();
-        mThreadPool->waitForDone();
+//        mThreadPool->waitForDone();
         mThreadPool->deleteLater();
     }
     mTargetNodeMap.clear();
@@ -295,6 +295,7 @@ public:
         mNode = node;
         mParent = parent;
         mRectList = rectlist;
+        setAutoDelete(true);
     }
 
     ~nodeRelativeRectRun() {}
@@ -556,10 +557,18 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
         foreach (QSharedPointer<TargetNode> node, mTargetNodeMap) {
             mThreadPool->start(new nodeRelativeRectRun(node.data(), this, &temp_list));
         }
-        mThreadPool->waitForDone();
+//        mThreadPool->waitForDone();
+        while (mThreadPool->activeThreadCount()) {
+            if(mIsOver){
+                mThreadPool->clear();
+                break;
+            }
+            msleep(100);
+        }
     } else
     {
         foreach (QSharedPointer<TargetNode> node, mTargetNodeMap) {
+            if(mIsOver) break;
             calcNodeMostRelativeRect(node.data(),  temp_list);
         }
     }
@@ -570,6 +579,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
     QList<int> keys = mTargetNodeMap.keys();
     foreach (int key, keys)
     {
+        if(mIsOver) break;
         QSharedPointer<TargetNode> node = mTargetNodeMap[key];
         if(!node) continue;
 
@@ -740,6 +750,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
     //将未更新的矩形作为新目标添加
     for(int i=0; i<temp_list.size(); i++)
     {
+        if(mIsOver) break;
         zchxRadarRectDef rect = temp_list[i];
         if(used_index_list.contains(rect.mSrcRect.rectnumber())) continue;
         TargetNode *node = new TargetNode(rect);
@@ -764,6 +775,7 @@ void zchxRadarTargetTrack::outputTargets()
     QList<TargetNode*> output_list;
     for(TargetNodeMap::iterator it = mTargetNodeMap.begin(); it != mTargetNodeMap.end(); it++)
     {
+        if(mIsOver) break;
         TargetNode *node = it->data();
         if(!node || !node->mDefRect) continue;
         //构造目标数据
