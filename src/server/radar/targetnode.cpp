@@ -7,7 +7,7 @@
 #define         FALSE_ALARM_CONTINUE_EMPTY  5
 #define         FALSE_ALARM_COUNTER_PERCENT  0.5
 
-
+extern          bool  debug_output;
 TargetNode::TargetNode()
 {
     mSerialNum = 0;
@@ -36,7 +36,7 @@ TargetNode::TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode>
         mParent->mChild = this;
         mLastPrecitonTerm = mParent->mLastPrecitonTerm;
         mLastLostTime = mParent->mLastLostTime;
-        qDebug()<<"new child add to parent:"<<mSerialNum<<mParent->mDefRect->mCenter<<" child:"<<mDefRect->mCenter;
+        if(debug_output)    qDebug()<<"new child add to parent:"<<mSerialNum<<mParent->mDefRect->mCenter<<" child:"<<mDefRect->mCenter;
     }
     mVideoTerm = other.mSrcRect.videocycleindex();
 

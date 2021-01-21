@@ -11,6 +11,8 @@
 #include <QDebug>
 #include "zchxradarrectextraction.h"
 
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
 
 ZCHXRadarVideoProcessor::ZCHXRadarVideoProcessor(const zchxVideoParserSettings& setting, QObject *parent)
     : QThread(parent)
@@ -38,7 +40,7 @@ void ZCHXRadarVideoProcessor::appendSrcData(const zchxRadarVideoSourceData &task
 {
     QMutexLocker locker(&mMutex);
     mTaskList.append(task);
-    qDebug()<<"after append task size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
+    DEBUG_TRACK_INFO<<"after append task size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
 }
 
 bool ZCHXRadarVideoProcessor::getProcessData(ZCHXRadarVideoProcessorData& task)
@@ -49,7 +51,7 @@ bool ZCHXRadarVideoProcessor::getProcessData(ZCHXRadarVideoProcessorData& task)
     int start_index = size - mParse.user_video_parse.video_overlap_cnt;
     task = mTaskList.mid(start_index, mParse.user_video_parse.video_overlap_cnt);
     mTaskList = mTaskList.mid(start_index + 1);
-    qDebug()<<"task left size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
+    DEBUG_TRACK_INFO<<"task left size:"<<mTaskList.size()<<" overlap cnt:"<<mParse.user_video_parse.video_overlap_cnt;
     return true;
 }
 
@@ -67,7 +69,7 @@ void ZCHXRadarVideoProcessor::run()
         zchxTimeElapsedCounter counter("process video image");
         process(task);
     }
-    qDebug()<<"now ZCHXRadarVideoProcessor thread finished...";
+    DEBUG_TRACK_INFO<<"now ZCHXRadarVideoProcessor thread finished...";
 }
 
 QColor ZCHXRadarVideoProcessor::getColor(double dValue)
@@ -118,7 +120,7 @@ void ZCHXRadarVideoProcessor::slotSetColor(int a1,int a2,int a3,int b1,int b2,in
 bool ZCHXRadarVideoProcessor::mergeVideoOfMultiTerms(QMap<int, RADAR_VIDEO_DATA> &result, const ZCHXRadarVideoProcessorData &task)
 {
     if(task.size() == 0) return false;
-    qDebug()<<"start merge video data of multi terms...";
+    DEBUG_TRACK_INFO<<"start merge video data of multi terms...";
     result = task[0].m_RadarVideo;
     for(int i=1; i<task.size(); i++)
     {
@@ -154,7 +156,7 @@ bool ZCHXRadarVideoProcessor::mergeVideoOfMultiTerms(QMap<int, RADAR_VIDEO_DATA>
     }
 
     int size = result.size();
-    qDebug()<<"end merge video data of multi terms. and result size:"<<size;
+    DEBUG_TRACK_INFO<<"end merge video data of multi terms. and result size:"<<size;
     return size > 0;
 }
 
@@ -213,7 +215,7 @@ public:
                 point_num++;
             }
         }
-        qDebug()<<"total point num = "<<point_num<<" and elapsed:"<<t.elapsed();
+        DEBUG_TRACK_INFO<<"total point num = "<<point_num<<" and elapsed:"<<t.elapsed();
     }
 
 private:
@@ -293,7 +295,7 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
         //开始遍历所有叠加的周期开始画回波图形，每个周期单独绘制
         if(mParse.user_video_parse.video_color_list.size() < task.size())
         {
-            qDebug()<<"over lap cnt is larger than color set. anbormal returned";
+            DEBUG_TRACK_INFO<<"over lap cnt is larger than color set. anbormal returned";
             return;
         }
         QTime t;
@@ -322,7 +324,7 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
             pool.start(run);
         }
         pool.waitForDone();
-        qDebug()<<"draw single image:"<<t.elapsed();
+        DEBUG_TRACK_INFO<<"draw single image:"<<t.elapsed();
         t.restart();
         QPainter painter;
         painter.begin(&objPixmap);
@@ -334,7 +336,7 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
         }
         imglist.clear();
 #endif
-        qDebug()<<"merge img:"<<t.elapsed();
+        DEBUG_TRACK_INFO<<"merge img:"<<t.elapsed();
     }
 
     if(mParse.user_video_parse.use_original_video_img) emit signalSendVideoPixmap(objPixmap);

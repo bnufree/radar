@@ -6,6 +6,8 @@
 #include <QDir>
 #include "dataout/zchxdataoutputservermgr.h"
 
+bool        debug_output = false;
+
 zchxCfgMgr::zchxCfgMgr(const QString& fileName, QObject *parent) :
     QObject(parent),
     mFileName(fileName),
@@ -61,6 +63,7 @@ zchxCfgMgr::zchxCfgMgr(const QString& fileName, QObject *parent) :
         return;
     }
     mCfg = new zchxCommon::zchxRadarServerCfg(doc.object());
+    debug_output = mCfg->debug_output;
     QString local_ip = zchxCommonUtils::getAllIpv4List().first();
     if(mCfg->server.ip != local_ip)
     {

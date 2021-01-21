@@ -42,7 +42,8 @@ QByteArray zchxRadarUtils::protoBufMsg2ByteArray(google::protobuf::Message *msg)
 #include <QLine>
 #include <QNetworkInterface>
 
-#define cout qDebug()<< "在文件"<<__FILE__ << "第"<< __LINE__<< "行"
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
 
 RADAR_VIDEO_DATA::RADAR_VIDEO_DATA()
 {
@@ -642,7 +643,7 @@ void zchxTimeElapsedCounter::print()
 {
     qint64 counter = mTimer.elapsed();
     mTotal += counter;
-    qDebug()<<mFunc<<" elapsed:"<<counter<< "and total msecs:"<<mTotal;
+    DEBUG_TRACK_INFO<<mFunc<<" elapsed:"<<counter<< "and total msecs:"<<mTotal;
 }
 
 QStringList  getAllIpv4List()

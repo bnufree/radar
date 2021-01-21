@@ -18,6 +18,8 @@
 #define FILE_MAX_SIZE       30720
 typedef uint8_t UINT8;
 
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
 
 QNetworkInterface findNIF(const QString& ip)
 {
@@ -251,8 +253,8 @@ void ZCHXRadarDataServer::updateChannelSettings(const zchxCommon::zchxRadarChann
     mChSet = channel;
     mChannelReport.mChannelID = mChSet.id;
     mParseSet = parse;
-    qDebug()<<"src parse:"<<parse.cell_num<<parse.line_num;
-    qDebug()<<"dest parse:"<<mParseSet.cell_num<<mParseSet.line_num;
+    DEBUG_TRACK_INFO<<"src parse:"<<parse.cell_num<<parse.line_num;
+    DEBUG_TRACK_INFO<<"dest parse:"<<mParseSet.cell_num<<mParseSet.line_num;
     updateParseSetting(mParseSet);
     initDataSocket(false);
 }
@@ -325,12 +327,12 @@ void ZCHXRadarDataServer::updateParseSetting(const zchxVideoParserSettings &pars
         disconnect(this, SIGNAL(signalSendVideoData(QByteArray)), mVideoParse, SLOT(slotRecvVideoData(QByteArray)));
         delete mVideoParse;
         mVideoParse = 0;
-        qDebug()<<"stop now exist video data parse end";
+        qDebug()<<"video data parse end now....";
 #endif
     }
     if(!mVideoParse)
     {
-        qDebug()<<"start new video data parse...."<<parse.cell_num<<parse.line_num;
+        qDebug()<<"start new video data parse....";
         mVideoParse = new zchxRadarVideoParser(mOutputMgr, parse);
         connect(this, SIGNAL(signalSendVideoData(QByteArray)), mVideoParse, SLOT(slotRecvVideoData(QByteArray)));
     }
@@ -364,7 +366,7 @@ void ZCHXRadarDataServer::slotHeartTimerJob()
 {
     if(!mHeartSocket)
     {
-        qDebug()<<"write heart data. but socket null";
+        DEBUG_TRACK_INFO<<"write heart data. but socket null";
         return;
     }
     //修改发送数据方式
@@ -386,7 +388,7 @@ void ZCHXRadarDataServer::slotHeartTimerJob()
 
 void ZCHXRadarDataServer::slotRecvHeartData(const QByteArray &bytes)
 {
-//    qDebug()<<"recv heart data with size:"<<bytes<<bytes.toHex().toUpper();
+//    DEBUG_TRACK_INFO<<"recv heart data with size:"<<bytes<<bytes.toHex().toUpper();
     if(mOutputData) outputData2File(Data_Heart, bytes);
 }
 
@@ -433,7 +435,7 @@ void ZCHXRadarDataServer::outputData2File(int type, const QByteArray &data)
     bool isOk = file.open(QIODevice::WriteOnly |QIODevice::Append);
     if(false == isOk)
     {
-        qDebug() <<"open file failed:"<<(*wkFileName);
+        DEBUG_TRACK_INFO <<"open file failed:"<<(*wkFileName);
         return;
     }
     file.write(data);
@@ -462,7 +464,7 @@ void ZCHXRadarDataServer::slotRecvVideoData(const QByteArray &sRadarData)
 
 void ZCHXRadarDataServer::setNormalCtrlValue(int infotype, int value)
 {
-    qDebug()<<"infotype:"<<infotype<<" value:"<<value;
+    DEBUG_TRACK_INFO<<"infotype:"<<infotype<<" value:"<<value;
     //检查当前值是否存在
     if(!mHeartSocket) return;
     switch (infotype) {
@@ -616,7 +618,7 @@ void ZCHXRadarDataServer::setNormalCtrlValue(int infotype, int value)
 
     case zchxCommon::RESET:
     {
-        qDebug()<<"reset radar now............";
+        DEBUG_TRACK_INFO<<"reset radar now............";
         UINT8 cmd[] = {0x04, 0xc3};
         mHeartSocket->writeData(QByteArray((char *)(cmd),sizeof(cmd)));
     break;
@@ -659,12 +661,12 @@ void ZCHXRadarDataServer::setCtrlValue(int type, QJsonValue value)
     if(array.size() < 2) return;
     fan.is_open = array[1].toBool();
     fan.sector = array[0].toInt();
-    qDebug()<<array<<fan.is_open<<fan.sector;
+    DEBUG_TRACK_INFO<<array<<fan.is_open<<fan.sector;
     if(array.size() == 2)
     {
         UINT8 cmd[] = {0x0d, 0xc1, UINT8(fan.sector), 0, 0, 0, fan.is_open ? 0x01:0x00};
         mHeartSocket->writeData(QByteArray((char *)(cmd),sizeof(cmd)));
-        qDebug()<<QByteArray((char *)(cmd),sizeof(cmd)).toHex().toUpper();
+        DEBUG_TRACK_INFO<<QByteArray((char *)(cmd),sizeof(cmd)).toHex().toUpper();
     } else if(array.size() == 4 && fan.is_open)
     {
         fan.start = array[2].toInt();
@@ -673,7 +675,7 @@ void ZCHXRadarDataServer::setCtrlValue(int type, QJsonValue value)
                        (fan.start >> 8) & 0xFFL, (fan.start & 0xFFL),
                        (fan.end >> 8) & 0xFFL, (fan.end & 0xFFL),};
         mHeartSocket->writeData(QByteArray((char *)(cmd),sizeof(cmd)));
-        qDebug()<<QByteArray((char *)(cmd),sizeof(cmd)).toHex().toUpper();
+        DEBUG_TRACK_INFO<<QByteArray((char *)(cmd),sizeof(cmd)).toHex().toUpper();
 
     }
 }
@@ -719,21 +721,21 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
     case (18 << 8) + 0x01:  //4068 + 1
     {
         RadarReport_01C4_18 *s = (RadarReport_01C4_18 *)bytes.data();
-//        qDebug()<<"radar status:"<<s->radar_status;
+//        DEBUG_TRACK_INFO<<"radar status:"<<s->radar_status;
         switch (bytes[2])
         {
         case 0x01:
-//            qDebug()<<"reports status RADAR_STANDBY";
+//            DEBUG_TRACK_INFO<<"reports status RADAR_STANDBY";
             updateReportValue(zchxCommon::POWER,0);
             updateReportValue(zchxCommon::OPEN, false);
             break;
         case 0x02:
-//            qDebug()<<"reports status TRANSMIT";
+//            DEBUG_TRACK_INFO<<"reports status TRANSMIT";
             updateReportValue(zchxCommon::POWER,1);
             updateReportValue(zchxCommon::OPEN, true);
             break;
         case 0x05:
-//            qDebug()<<"reports status WAKING UP";
+//            DEBUG_TRACK_INFO<<"reports status WAKING UP";
             break;
         default:
             break;
@@ -773,23 +775,23 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         RadarReport_03C4_129 *s = (RadarReport_03C4_129 *)bytes.data();
         switch (s->radar_type) {
         case 0x0f:
-            qDebug()<<"current radar is BR24";
+            DEBUG_TRACK_INFO<<"current radar is BR24";
             mType = zchxCommon::RADAR_BR24;
             break;
         case 0x08:
-            qDebug()<<"current radar is 3G";
+            DEBUG_TRACK_INFO<<"current radar is 3G";
             mType = zchxCommon::RADAR_3G;
             break;
         case 0x01:
-            qDebug()<<"current radar is 4G";
+            DEBUG_TRACK_INFO<<"current radar is 4G";
             mType = zchxCommon::RADAR_4G;
             break;
         case 0x00:
-            qDebug()<<"current radar is 6G";
+            DEBUG_TRACK_INFO<<"current radar is 6G";
             mType = zchxCommon::RADAR_6G;
             break;
         default:
-            qDebug()<<"Unknown radar_type: "<< s->radar_type;
+            DEBUG_TRACK_INFO<<"Unknown radar_type: "<< s->radar_type;
         }
         if(mOutputMgr) mOutputMgr->updateRadarType(mParseSet.channel_id, mType, QString::number(mParseSet.radar_id));
         if(mVideoParse) mVideoParse->slotSetRadarType(mType);
@@ -849,7 +851,7 @@ void ZCHXRadarDataServer::slotRecvReportData(const QByteArray& bytes)
         updateReportValue(zchxCommon::LOCAL_INTERFERENCE_REJECTION, s08->old.local_interference_rejection);
         uint8_t state = s08->doppler_state;
         uint8_t speed = s08->doppler_speed;
-        qDebug()<<"doppler state:"<<state<<speed;
+        DEBUG_TRACK_INFO<<"doppler state:"<<state<<speed;
         break;
     }
     default:

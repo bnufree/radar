@@ -5,11 +5,13 @@
 #include <QThreadPool>
 
 
-#define     DEBUG_TRACK_INFO                if(1) qDebug()
 #define     PROCESS_MULTI_CALC
 
 extern double polygonArea(const QPolygon& poly);
 extern double polygonArea(const QPolygonF& poly);
+
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
 
 QPolygonF  predictionAreaLL2PolygonF(const com::zhichenhaixin::proto::PredictionArea& area)
 {
@@ -265,7 +267,7 @@ void zchxRadarTargetTrack::CounterPossibleChildRect(QList<AreaNodeTable>& areaTa
             Mercator pos = latlonToMercator(def.mSrcRect.center().latitude(), def.mSrcRect.center().longitude());
             if(table.mArea.containsPoint(pos.toPointF(), Qt::OddEvenFill))
             {
-                table.mRectList.append(def);
+                 table.mRectList.append(def);
             }
         }
     }
@@ -446,6 +448,7 @@ void zchxRadarTargetTrack::determineNodeStatus(TargetNode* node, bool term_chk)
         //计算两个节点之间的距离
         double dis = calcDis(node->mDefRect, topNode->mDefRect);
         double size = topNode->mDefRect->mSrcRect.boundrect().diameter();
+        if(size >= 200) size = 200;
         int time = node->mDefRect->mSrcRect.updatetime() - topNode->mUpdateTime;
         if(dis >= size)
         {
@@ -546,7 +549,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
     uint cur_cycle_index = task.first().mSrcRect.videocycleindex();
     zchxRadarRectDefList temp_list(task);             //保存的未经处理的所有矩形单元
     quint32 now_time = task.first().mSrcRect.updatetime();
-    DEBUG_TRACK_INFO <<"now process list time:"<<QDateTime::fromTime_t(task.first().mSrcRect.updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
+    qDebug()<<"now process list time:"<<QDateTime::fromTime_t(task.first().mSrcRect.updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
 
     //目标最初都认为是静止，当目标的运动长度超出了目标回波的宽度的时候，才认为目标是运动目标
     QTime t;
@@ -573,7 +576,8 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
         }
     }
 
-    DEBUG_TRACK_INFO<<"calculate node relative rect elapsed time: "<<t.elapsed();
+    qDebug()<<"calculate node relative rect elapsed time: "<<t.elapsed();
+    t.start();
     //对已经存在的目标，更新其下一个节点。
     QList<int>  used_index_list;        //标记已经更新过的目标块
     QList<int> keys = mTargetNodeMap.keys();
@@ -695,7 +699,8 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
                 {
                     geo_pix.setX( qRound(0.5* (geo_pix.x() + target.mCenter.x())));
                     geo_pix.setY( qRound(0.5* (geo_pix.y() + target.mCenter.y())));
-                    if(geo_pix == target.mCenter) break;
+                    if(qAbs(geo_pix.x() - target.mCenter.x()) <= 2 && (qAbs(geo_pix.y() - target.mCenter.y()) <= 2)) break;
+//                    if(geo_pix == target.mCenter) break;
                 }
                 Latlon ll = copy.mPosConveter.pixel2Latlon(geo_pix);
                 changeTargetLL(ll, copy);
@@ -747,6 +752,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             used_index_list.append(target.mSrcRect.rectnumber());
         }
     }
+    qDebug()<<"update exist elapsed time: "<<t.elapsed();
     //将未更新的矩形作为新目标添加
     for(int i=0; i<temp_list.size(); i++)
     {
@@ -761,7 +767,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
 
     //现在将目标进行输出
     outputTargets();
-//    qDebug()<<"totol target size:"<<mTargetNodeMap.size();
+    qDebug()<<"totol target size:"<<mTargetNodeMap.size();
 }
 
 void zchxRadarTargetTrack::outputTargets()

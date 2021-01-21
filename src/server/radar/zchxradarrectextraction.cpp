@@ -12,6 +12,9 @@
 using namespace std;
 using namespace cv;
 
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
+
 double polygonArea(const QPolygon& poly)
 {
     vector<Point> contour;
@@ -33,7 +36,7 @@ double polygonArea(const QPolygonF& poly)
 cv::Mat QImage2cvMat(QImage image)
 {
     cv::Mat mat;
-//    qDebug() << image.format();
+//    DEBUG_TRACK_INFO << image.format();
     switch(image.format())
     {
     case QImage::Format_ARGB32:
@@ -85,7 +88,7 @@ QImage cvMat2QImage(const cv::Mat& mat)
     }
     else if(mat.type() == CV_8UC4)
     {
-        qDebug() << "CV_8UC4";
+        DEBUG_TRACK_INFO << "CV_8UC4";
         // Copy input Mat
         const uchar *pSrc = (const uchar*)mat.data;
         // Create QImage with same dimensions as input Mat
@@ -94,7 +97,7 @@ QImage cvMat2QImage(const cv::Mat& mat)
     }
     else
     {
-        qDebug() << "ERROR: Mat could not be converted to QImage.";
+        DEBUG_TRACK_INFO << "ERROR: Mat could not be converted to QImage.";
         return QImage();
     }
 }
@@ -214,7 +217,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         saveImg(opencv_dir, "4", binary);
         saveImg(opencv_dir, "5", connImage);
     }
-    qDebug()<<"video countours size before filter:"<<contours.size();
+//    DEBUG_TRACK_INFO<<"video countours size before filter:"<<contours.size();
     //提取轮廓点
     int index = 1;
     for(int i=0; i<contours.size(); i++)
@@ -345,7 +348,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     QPainter painter;
     painter.begin(&result);
 
-    qDebug()<<"skip poly size:"<<skip_poly_list.size();
+    DEBUG_TRACK_INFO<<"skip poly size:"<<skip_poly_list.size();
 
     //开始将不符合要求的回波图形删除
     if(skip_poly_list.size() > 0)
@@ -361,7 +364,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     }
     if(0)
     {
-        qDebug()<<"filter area size:"<<mOutFilterAreaMercatorList.size()<<mInFilterAreaMercatorList.size();
+        DEBUG_TRACK_INFO<<"filter area size:"<<mOutFilterAreaMercatorList.size()<<mInFilterAreaMercatorList.size();
         //测试禁止区域
         painter.setPen(Qt::blue);
         painter.setBrush(QColor(255, 0, 0, 100));

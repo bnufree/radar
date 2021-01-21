@@ -294,7 +294,11 @@ zchxRadarServerCfg::zchxRadarServerCfg(const QJsonObject& obj) : zchxData(obj)
     publish_list = zchxPublishSettingsList(obj.value("publish_list").toArray());
     device_list = zchxRadarDeviceList(obj.value("device_list").toArray());
     filter_enabled = obj.value("filter_enabled").toBool();
-
+    debug_output = false;
+    if(obj.contains("debug_output"))
+    {
+        debug_output = obj.value("debug_output").toBool();
+    }
 }
 
 QJsonValue  zchxRadarServerCfg::toJson() const
@@ -307,6 +311,7 @@ QJsonValue  zchxRadarServerCfg::toJson() const
     obj.insert("publish_list", publish_list.toJson());
     obj.insert("device_list", device_list.toJson());
     obj.insert("filter_enabled", filter_enabled);
+    obj.insert("debug_output", debug_output);
     return obj;
 }
 

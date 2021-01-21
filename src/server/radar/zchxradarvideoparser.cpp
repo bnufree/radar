@@ -93,6 +93,9 @@ void zchxRadarVideoParser::InitializeLookupData()
   }
 }
 
+extern bool   debug_output;
+#define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
+
 zchxRadarVideoParser::zchxRadarVideoParser(zchxRadarOutputDataMgr* mgr, const zchxVideoParserSettings& parse, QObject *parent)
     : QObject(parent),
       mStartAzimuth(-1),
@@ -141,11 +144,11 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
 {
     if(mVideoProcessor)
     {
-        qDebug()<<"now wait for processor terminate...";
+        qDebug()<<"now wait for video processor terminate...";
         mVideoProcessor->setOver(true);
         int i = 0;
         while (!mVideoProcessor->isFinished()) {
-            qDebug()<<"wait for video processor end "<<i++;
+            DEBUG_TRACK_INFO<<"wait for video processor end "<<i++;
             QThread::currentThread()->msleep(50);
         }
         mVideoProcessor->terminate();
@@ -157,10 +160,11 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
 
     if(mTargetTrackProcessor)
     {
+        qDebug()<<"now wait for track processor terminate...";
         int i = 0;
         mTargetTrackProcessor->setOver(true);
         while (!mTargetTrackProcessor->isFinished()) {
-            qDebug()<<"wait track processor end "<<i++;
+            DEBUG_TRACK_INFO<<"wait track processor end "<<i++;
             QThread::currentThread()->msleep(50);
         }
         mTargetTrackProcessor->terminate();
@@ -174,13 +178,13 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
     {
         if(mWorkThread->isRunning())
         {
-            qDebug()<<"quit parse thread...";
+            DEBUG_TRACK_INFO<<"quit parse thread...";
             mWorkThread->quit();
         }
-        qDebug()<<"terminate parse thread...";
+        DEBUG_TRACK_INFO<<"terminate parse thread...";
         mWorkThread->terminate();
         mWorkThread->wait();
-        qDebug()<<"delete parse thread...";
+        DEBUG_TRACK_INFO<<"delete parse thread...";
         delete mWorkThread;
         mWorkThread = NULL;
     }
@@ -195,19 +199,19 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
     BR24::Constants::radar_frame_pkt *packet = (BR24::Constants::radar_frame_pkt *)buf;//正常大小是17160
 
     //cout<<sizeof(BR24::Constants::radar_frame_pkt);//结构体大小是固定的64328 定的120个spoke(536*120)+frame_hdr(8)
-    //qDebug()<<" packet len:"<<(int)sizeof(packet->frame_hdr);
+    //DEBUG_TRACK_INFO<<" packet len:"<<(int)sizeof(packet->frame_hdr);
     if (len < (int)sizeof(packet->frame_hdr)) {
-        qDebug()<<"The packet is so small it contains no scan_lines, quit!";
+        DEBUG_TRACK_INFO<<"The packet is so small it contains no scan_lines, quit!";
         return;
     }
     //cout<<len<<sizeof(packet->frame_hdr)<<sizeof(BR24::Constants::radar_line);//第 178 行 (17160 - 8) / 536 = 32
     int scanlines_in_packet = (len - sizeof(packet->frame_hdr)) / sizeof(BR24::Constants::radar_line);
     if (scanlines_in_packet != 32) {
-        qDebug()<<QString::fromUtf8("此包没有32条扫描线，丢包！");
+        DEBUG_TRACK_INFO<<QString::fromUtf8("此包没有32条扫描线，丢包！");
         return;
     }
 
-//    qDebug()<<"parse setting,(cell, line):"<<mParseParam.cell_num<<mParseParam.line_num;
+//    DEBUG_TRACK_INFO<<"parse setting,(cell, line):"<<mParseParam.cell_num<<mParseParam.line_num;
 
     QList<int> lineData;
     double range_factor;
@@ -219,20 +223,20 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         //cout<<spoke;
 
         if (line->common.headerLen != 0x18) {
-            qDebug()<<"strange header length(normal:24):" << line->common.headerLen;
+            DEBUG_TRACK_INFO<<"strange header length(normal:24):" << line->common.headerLen;
             mNextSpoke = (spoke + 1) % SPOKES;
             continue;
         }
 
         //probably status: 02 valid data; 18 spin up
         if (line->common.status != 0x02 && line->common.status != 0x12) {
-            qDebug()<<"strange status:" << line->common.status;
+            DEBUG_TRACK_INFO<<"strange status:" << line->common.status;
         }
         if (mNextSpoke >= 0 && spoke != mNextSpoke) {
-            qDebug()<<"error spoke:"<<spoke<<mNextSpoke<<" with radar : channel "<<mParseParam.radar_id<<mParseParam.channel_id;
+            DEBUG_TRACK_INFO<<"error spoke:"<<spoke<<mNextSpoke<<" with radar : channel "<<mParseParam.radar_id<<mParseParam.channel_id;
         }
         mNextSpoke = (spoke + 1) % SPOKES;
-        //qDebug()<<"current spoke:"<<spoke<<" next:"<<m_next_spoke;
+        //DEBUG_TRACK_INFO<<"current spoke:"<<spoke<<" next:"<<m_next_spoke;
         int range_raw = 0;
         int angle_raw = 0;
         short int heading_raw = 0;
@@ -296,11 +300,11 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
                 range_meters = (int)((double)range_raw * 10.0 / sqrt(2.0));
                 //range_meters = 7249.92;//1_写死距离因子,和半径
 
-                qDebug()<<"br24";
+                DEBUG_TRACK_INFO<<"br24";
 
                 // test code:
                 if (g_lastRange != range_meters) {
-                    qDebug()<<QString("BR24 and 3G mode: range_raw = %1, range_meters = %2").arg(range_raw).arg(range_meters);
+                    DEBUG_TRACK_INFO<<QString("BR24 and 3G mode: range_raw = %1, range_meters = %2").arg(range_raw).arg(range_meters);
 
                     g_lastRange = range_meters;
                 }
@@ -339,17 +343,17 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
             heading = (fmod(heading_degrees + 2 * DEGREES_PER_ROTATION, DEGREES_PER_ROTATION));
         }
         //角度值强制变成偶数
-//        qDebug()<<"spoke:"<<spoke<<" angle:"<<angle_raw;
+//        DEBUG_TRACK_INFO<<"spoke:"<<spoke<<" angle:"<<angle_raw;
         if(angle_raw % 2)
         {
             angle_raw += 1;
         }
         if(angle_raw == 4096) angle_raw = 0;
 //        angle_raw = MOD_ROTATION2048(angle_raw / 2);  //让方向和一圈的扫描线个数保持一致(2048)
-//        qDebug()<<"spoke:"<<spoke<<" angle:"<<angle_raw;
+//        DEBUG_TRACK_INFO<<"spoke:"<<spoke<<" angle:"<<angle_raw;
         double start_range = 0.0 ;        
 
-        //qDebug()<<"range_meter:"<<range_meters<<" cellNum:"<<uCellNum<<" range_factor"<<range_factor;
+        //DEBUG_TRACK_INFO<<"range_meter:"<<range_meters<<" cellNum:"<<uCellNum<<" range_factor"<<range_factor;
 
         lineData.clear();
         //double dAzimuth = angle_raw * (360.0 / (uLineNum / 2)) + uHeading;
@@ -407,7 +411,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         mTermSpokeCount++;
         if(mStartAzimuth == -1)
         {
-            qDebug()<<video_id<<"start new term video data at angle:"<<objVideoData.m_uAzimuth;
+            DEBUG_TRACK_INFO<<video_id<<"start new term video data at angle:"<<objVideoData.m_uAzimuth;
             mCounterT.start();
             mStartAzimuth = angle_raw;
         }
@@ -471,7 +475,7 @@ void zchxRadarVideoParser::slotSendRadarNodeRoute(const zchxRadarRouteNodes& lis
 //    if((!mRadarOutMgr) || list.node_list_size() == 0) return;
 
 //    zchxRadarRouteNodes* nodes = new zchxRadarRouteNodes(list);
-//    qDebug()<<"send data node size:"<<list.node_list_size();
+//    DEBUG_TRACK_INFO<<"send data node size:"<<list.node_list_size();
 //    //通过zmq发送
 //    mRadarOutMgr->appendData(zchxRadarUtils::protoBufMsg2ByteArray(nodes), "RadarRoute", mRadarTrackPort);
 //    delete nodes;

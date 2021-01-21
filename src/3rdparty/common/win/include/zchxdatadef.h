@@ -308,8 +308,9 @@ public:
     zchxPublishSettingsList                 publish_list;
     zchxRadarDeviceList                     device_list;
     bool                                    filter_enabled;
+    bool                                    debug_output;
 
-    zchxRadarServerCfg() : zchxData() { filter_enabled = true;}
+    zchxRadarServerCfg() : zchxData() { filter_enabled = true; debug_output = false;}
     zchxRadarServerCfg(const QJsonArray& array) : zchxData(array) {}
     zchxRadarServerCfg(const QJsonObject& obj);
     QJsonValue  toJson() const;

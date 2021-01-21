@@ -47,7 +47,7 @@ void zchxDataOutputServerMgr::initFromCfg(const zchxCommon::zchxPublishSettingsL
     for(int i=0; i<list.size(); i++)
     {
         zchxCommon::zchxPublishSetting setting = list[i];
-        qDebug()<<"start create output thread. data id:"<<setting.id<<"port:"<<setting.port<<" topic:"<<setting.topic;
+//        qDebug()<<"start create output thread. data id:"<<setting.id<<"port:"<<setting.port<<" topic:"<<setting.topic;
         QString old_topic = mCaseTopicList.value(setting.id, "");
 
         bool create_new_thread = true;
@@ -94,7 +94,7 @@ void zchxDataOutputServerMgr::initFromCfg(const zchxCommon::zchxPublishSettingsL
                 data.sts = thread->isOK();
                 data.topic = thread->topic().join(" ");
                 stslist.append(data);
-                qDebug()<<"thread port:"<<data.port<<"topic:"<<data.topic<<" status:"<<(data.sts ? "success" : " fail");
+//                qDebug()<<"thread port:"<<data.port<<"topic:"<<data.topic<<" status:"<<(data.sts ? "success" : " fail");
             }
         }
     }
