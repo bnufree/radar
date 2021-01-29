@@ -20,6 +20,8 @@ ZCHXRadarDataChange::ZCHXRadarDataChange(QObject *parent)
     qRegisterMetaType<zchxCommon::zchxRadarDeviceList>("const zchxCommon::zchxRadarDeviceList&");
     qRegisterMetaType<zchxCommon::zchxPublishSettingsList>("const zchxCommon::zchxPublishSettingsList&");
     qRegisterMetaType<zchxCommon::zchxRadarTypeData>("const zchxCommon::zchxRadarTypeData&");
+
+    qRegisterMetaType<QList<ZCHX::Data::ITF_RadarNodeLog>>("const QList<ZCHX::Data::ITF_RadarNodeLog>&");
 }
 
 ZCHXRadarDataChange::~ZCHXRadarDataChange()
@@ -67,6 +69,7 @@ void ZCHXRadarDataChange::appendPublishSetting(const QString& host, const zchxCo
         connect(thread, SIGNAL(signalUpdateRadarChannelRadius(int,int,double,double)), this, SIGNAL(signalUpdateRadarChannelRadius(int,int,double,double)));
         connect(thread, SIGNAL(signalUpdatePublishPortStatus(zchxCommon::zchxPublishSettingsList)), this, SIGNAL(signalUpdatePublishPortStatus(zchxCommon::zchxPublishSettingsList)));
         connect(thread, SIGNAL(signalUpdateRadarType(zchxCommon::zchxRadarTypeData)), this, SIGNAL(signalUpdateRadarType(zchxCommon::zchxRadarTypeData)));
+        connect(thread, SIGNAL(signalSendRadarNodeLog(QList<ZCHX::Data::ITF_RadarNodeLog>)), this, SIGNAL(signalSendRadarNodeLog(QList<ZCHX::Data::ITF_RadarNodeLog>)));
 
         thread->start();
         mThreadList.append(thread);

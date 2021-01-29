@@ -133,6 +133,9 @@ void zchxDataMgrFactory::createManager(int type)
     case ZCHX::DATA_MGR_RADAR_ROUTE_PATH:
         mMgrList[type] = std::shared_ptr<zchxRadarNodePathDataMgr>(new zchxRadarNodePathDataMgr(mWidget));
         break;
+    case ZCHX::DATA_MGR_RADAR_NODE_LOG:
+        mMgrList[type] = std::shared_ptr<zchxRadarNodeLogDataMgr>(new zchxRadarNodeLogDataMgr(mWidget));
+        break;
     default:
         break;
     }
@@ -341,6 +344,11 @@ zchxPolygonDataMgr *zchxDataMgrFactory::getPolygonMgr()
 zchxRadarNodePathDataMgr *zchxDataMgrFactory::getRadarRoutePathMgr()
 {
     return static_cast<zchxRadarNodePathDataMgr*>(getManager(ZCHX::DATA_MGR_RADAR_ROUTE_PATH).get());
+}
+
+zchxRadarNodeLogDataMgr *zchxDataMgrFactory::getRadarNodeLogMgr()
+{
+    return static_cast<zchxRadarNodeLogDataMgr*>(getManager(ZCHX::DATA_MGR_RADAR_NODE_LOG).get());
 }
 }
 

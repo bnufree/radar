@@ -17,6 +17,7 @@ public:
     void     updateChannelReport(int channel, const zchxCommon::zchxRadarChannelReport& report);
     void     updateRadarType(int channel, int type, const QString &radarID);
     void     updateRadarRadiusAndFactor(int channel, double radius, double factor, const QString &radarID);
+    void     updateDelNodeLog(int channel, const QByteArray& log);
 
 signals:
 

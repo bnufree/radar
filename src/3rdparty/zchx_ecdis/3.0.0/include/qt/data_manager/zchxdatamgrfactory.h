@@ -58,6 +58,7 @@ public:
     zchxLineDataMgr* getLineMgr();
     zchxPolygonDataMgr* getPolygonMgr();
     zchxRadarNodePathDataMgr* getRadarRoutePathMgr();
+    zchxRadarNodeLogDataMgr*  getRadarNodeLogMgr();
 
 private:
     static zchxDataMgrFactory     *minstance;

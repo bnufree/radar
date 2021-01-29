@@ -685,6 +685,8 @@ public slots: //定义Recive数据接口
 
     void itfSetRadarHistoryTrackDisplay(bool sts);
     void itfSetRadarGlowDisplay(bool sts);
+
+    void itfSetRadarNodeLogList(const QList<ZCHX::Data::ITF_RadarNodeLog>& list);
 protected Q_SLOTS:
     void OnMeasureAreaAction();
     void OnDirAngleAction();

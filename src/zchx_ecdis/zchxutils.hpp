@@ -99,6 +99,7 @@ namespace ZCHX {
       DATA_MGR_POINT,
       DATA_MGR_LINE,
       DATA_MGR_POLYGON ,
+      DATA_MGR_RADAR_NODE_LOG,
       DATA_MGR_USER_DEFINE,
 
 
@@ -262,7 +263,8 @@ enum ELETYPE{
     ELE_AIDTO_NAVIGATION,
     ELE_NAVIMARK,
     ELE_AIS_CHART,
-    ELE_POLYGON
+    ELE_POLYGON,
+    ELE_RADAR_NODE_LOG,
 
 };
 
@@ -463,6 +465,7 @@ struct TimeSpanVo{
     int defence_id;
     int time_cycle;
 };
+
 
 struct RadarMeet
 {
@@ -2239,6 +2242,20 @@ typedef struct tagITF_WeatherWindWaves
 
 }ITF_WeatherWindWaves;
 
+
+typedef struct tagITF_RadarNodeLog
+{
+    double getLat() const {return lat;}
+    double getLon() const {return lon;}
+    QString getName() const {return QString::number(track);}
+
+    double lat;
+    double lon;
+    qint64 time;
+    QString reason;
+    int track;
+}ITF_RadarNodeLog;
+
 }
 
 enum tagsFocus{
@@ -2408,6 +2425,7 @@ const char LAYER_VESSEL_TRACK[]       = "lay_vesselTrack";
 const char LAYER_WEATHER[]            = "lay_real_time_weather";
 const char LAYER_NAVIMARK[]           = "lay_navimark";
 const char LAYER_AIS_CHART[]        ="lay_ais_chart";         //ais基站
+const char LAYER_RADAR_LOG[]        ="lay_radar_log";         //ais基站
 
 //layer translate
 const char TR_LAYER_TOWER_ROD[]           = QT_TRANSLATE_NOOP("TranslationManager", "Tower Rod");
@@ -2497,5 +2515,6 @@ const char TR_LAYER_AIS_LAW[]            = QT_TRANSLATE_NOOP("TranslationManager
 const char TR_LAYER_NAVIMARK[]           = QT_TRANSLATE_NOOP("TranslationManager", "Navimark");
 const char TR_LAYER_AIS_CHART[]           = QT_TRANSLATE_NOOP("TranslationManager", "Ais Chart");
 const char TR_LAYER_RADARPATH[]           = QT_TRANSLATE_NOOP("TranslationManager", "Radar Path");
+const char TR_LAYER_RADAR_LOG[]           = QT_TRANSLATE_NOOP("TranslationManager", "Radar Log");
 
 }

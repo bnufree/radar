@@ -28,8 +28,6 @@ struct AreaNodeTable{
 #define     TARGET_CONFIRM_NODE_COUNT         5
 
 
-
-
 class zchxRadarTargetTrack : public QThread
 {
     Q_OBJECT
@@ -46,9 +44,12 @@ public:
 public slots:
     void        appendTrackTask(const zchxRadarRectDefList& task);
     void        setOver(bool sts) {mIsOver = sts;}
+    void        updateVideoCounter(int index);
+    void        updateRangeFactor(double factor) {mRangeFactor = factor;}
 
 protected:
     void     run();
+    void     addDelNodeReason(quint32 time, double lat, double lon, const QString& reason, int track);
 public:
 
     double      calcDis(const zchxRadarRectDef& p1, const zchxRadarRectDef& p2);
@@ -88,6 +89,7 @@ signals:
     void        signalSendTracks(const zchxRadarSurfaceTrack& track);
     void        signalSendRectData(const zchxRadarRectMap& map);
     void        signalSendRoutePath(const zchxRadarRouteNodes& list);
+    void        signalSendDelNodeLog(const QByteArray& log);
 public slots:
     void        updateTrackPointWithNode(zchxRadarSurfaceTrack& list, TargetNode* node);
 
@@ -111,6 +113,10 @@ private:
     quint32                     mLastVideoDataTime;
     double                      mMaxSpeed;
     QThreadPool                 *mThreadPool;
+    QMutex                      mVideoCounterMutex;
+    QMap<int, int>              mVideoUsedCounter;
+    double                      mRangeFactor;
+    zchxCommon::zchxDelNodeLogList                 mDelNodeReasonList;
 
 };
 

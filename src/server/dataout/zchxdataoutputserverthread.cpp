@@ -32,10 +32,6 @@ void zchxDataOutputServerThread::run()
             {
                 //数据分成3帧进行发送(时间+topic+内容)  
                 QByteArray sTimeArray = QString::number(QDateTime::currentMSecsSinceEpoch()).toUtf8();
-//                if(task[0] == "RadarVideo" || task[0] == "RadarTrack")
-//                {
-//                    qDebug()<<task[0]<<task[1].size();
-//                }
                 zmq_send(mSocket, task[0].data(), task[0].size(), ZMQ_SNDMORE);
                 zmq_send(mSocket, sTimeArray.data(), sTimeArray.size(), ZMQ_SNDMORE);
                 zmq_send(mSocket, task[1].data(), task[1].size(), 0);

@@ -70,6 +70,26 @@ zchxCfgMgr::zchxCfgMgr(const QString& fileName, QObject *parent) :
         mCfg->server.ip = local_ip;
         save();
     }
+    //检查是否
+    bool found_log = false;
+    for(int i=0; i<mCfg->publish_list.size(); i++)
+    {
+        if(mCfg->publish_list[i].id == zchxCommon::THREAD_DATA_DEL_NODE_LOG)
+        {
+            found_log = true;
+            break;
+        }
+    }
+    if(!found_log)
+    {
+        zchxCommon::zchxPublishSetting set;
+        set.id = zchxCommon::THREAD_DATA_DEL_NODE_LOG;
+        set.desc = QStringLiteral("雷达目标删除日志");
+        set.port = 10086;
+        set.topic = "Node Log";
+        mCfg->publish_list.append(set);
+        save();
+    }
 }
 
 zchxCfgMgr::~zchxCfgMgr()

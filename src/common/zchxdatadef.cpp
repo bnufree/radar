@@ -2,6 +2,28 @@
 
 using namespace zchxCommon;
 
+zchxDelNodeLog::zchxDelNodeLog(const QJsonObject &obj) : zchxData(obj)
+{
+    lat = obj.value("lat").toDouble();
+    lon = obj.value("lon").toDouble();
+    time = obj.value("time").toVariant().toLongLong();
+    track = obj.value("track").toInt();
+    reason = obj.value("reason").toString();
+}
+
+QJsonValue zchxDelNodeLog::toJson() const
+{
+    QJsonObject obj;
+    obj.insert("lat", lat);
+    obj.insert("lon", lon);
+    obj.insert("time", time);
+    obj.insert("track", track);
+    obj.insert("reason", reason);
+
+    return obj;
+}
+
+
 zchxLatlon::zchxLatlon(const QJsonArray &array) : zchxData(array)
 {
     lat = array[1].toDouble();
@@ -175,6 +197,7 @@ zchxVideoParse::zchxVideoParse() : zchxData()
     video_color_list.append(QVariant("#ff0000"));
     video_color_list.append(QVariant("#00ff00"));
     video_color_list.append(QVariant("#0000ff"));
+    target_move_confirm_dis = 200;
 }
 
 zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
@@ -206,6 +229,11 @@ zchxVideoParse::zchxVideoParse(const QJsonObject& obj) : zchxData(obj)
     {
         video_color_list.append(QVariant("#ff0000"));
     }
+    target_move_confirm_dis = 200;
+    if(obj.contains("target_move_confirm_dis"))
+    {
+        target_move_confirm_dis = obj.value("target_move_confirm_dis").toInt();
+    }
 
 }
 
@@ -233,7 +261,8 @@ bool zchxVideoParse::operator ==(const zchxVideoParse& other) const
             && this->head == other.head
             && this->use_original_video_img == other.use_original_video_img
             && this->merge_video == other.merge_video
-            && this->video_color_list == other.video_color_list);
+            && this->video_color_list == other.video_color_list
+            && this->target_move_confirm_dis == other.target_move_confirm_dis);
 }
 
 QJsonValue zchxVideoParse::toJson() const
@@ -262,6 +291,7 @@ QJsonValue zchxVideoParse::toJson() const
     obj.insert("use_original_video_img", use_original_video_img);
     obj.insert("merge_video", merge_video);
     obj.insert("video_color_list", QJsonArray::fromVariantList(video_color_list));
+    obj.insert("target_move_confirm_dis", target_move_confirm_dis);
     return obj;
 }
 

@@ -2001,6 +2001,11 @@ void MainWindow::itfSetRadarGlowDisplay(bool sts)
     zchx_ecdis_display_radar_glow = sts;
 }
 
+void MainWindow::itfSetRadarNodeLogList(const QList<ZCHX::Data::ITF_RadarNodeLog>& list)
+{
+    m_dataMgrFactory->getRadarNodeLogMgr()->setData(list);
+}
+
 
 }
 

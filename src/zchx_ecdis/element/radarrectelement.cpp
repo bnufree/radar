@@ -711,6 +711,19 @@ void RadarRectGlowElement::drawRadarTracks(QPainter *painter)
         }
     }
 
+    //开始画对应的相交区域
+    if(mRect.mCurrentRect.outline.size() > 0)
+    {
+        QPolygon poly;
+        foreach (ZCHX::Data::LatLon ll, mRect.mCurrentRect.outline) {
+            poly.append( mView->framework()->LatLon2Pixel(ll.lat, ll.lon).toPoint());
+        }
+        PainterPair chk(painter);
+        painter->setPen(QPen(Qt::white, 1, Qt::DashLine));
+        painter->setBrush(QBrush(QColor(100,100,100,100), Qt::SolidPattern));
+        painter->drawPolygon(poly);
+    }
+
 }
 
 QPixmap RadarRectGlowElement::scaledAndAlphaPixmap(const QPixmap &source, int alpha, int target_width, int target_height)

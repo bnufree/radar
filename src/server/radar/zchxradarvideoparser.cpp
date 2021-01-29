@@ -118,7 +118,9 @@ zchxRadarVideoParser::zchxRadarVideoParser(zchxRadarOutputDataMgr* mgr, const zc
     InitializeLookupData();
     //回波块解析
     mVideoProcessor =  new ZCHXRadarVideoProcessor(parse);
+    connect(mVideoProcessor, SIGNAL(finished()), mVideoProcessor, SLOT(deleteLater()));
     mTargetTrackProcessor = new zchxRadarTargetTrack(parse);
+    connect(mTargetTrackProcessor, SIGNAL(finished()), mTargetTrackProcessor, SLOT(deleteLater()));
 
     connect(mVideoProcessor,SIGNAL(signalSendVideoPixmap(QImage)), this, SLOT(slotSendVideoImage(QImage)));
     connect(mVideoProcessor, SIGNAL(signalSendParsedVideoData(zchxRadarRectDefList)),
@@ -127,6 +129,13 @@ zchxRadarVideoParser::zchxRadarVideoParser(zchxRadarOutputDataMgr* mgr, const zc
     //处理矩形回波块    
     connect(mTargetTrackProcessor, SIGNAL(signalSendTracks(zchxRadarSurfaceTrack)),
             this, SLOT(slotSendTracks(zchxRadarSurfaceTrack)));
+    connect(mTargetTrackProcessor, &zchxRadarTargetTrack::signalSendDelNodeLog, [=](const QByteArray& bytes)
+    {
+        if(mRadarOutMgr)
+        {
+            mRadarOutMgr->updateDelNodeLog(mParseParam.channel_id, bytes);
+        }
+    });
     mVideoProcessor->start();
     mTargetTrackProcessor->start();
 
@@ -151,11 +160,13 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
             DEBUG_TRACK_INFO<<"wait for video processor end "<<i++;
             QThread::currentThread()->msleep(50);
         }
-        mVideoProcessor->terminate();
-        mVideoProcessor->wait();
-        qDebug()<<"start delete video processor ...";
-        delete mVideoProcessor;
-        mVideoProcessor = NULL;
+//#ifdef Q_OS_WIN
+//        mVideoProcessor->terminate();
+//        mVideoProcessor->wait();
+//#endif
+//        qDebug()<<"start delete video processor ...";
+//        delete mVideoProcessor;
+//        mVideoProcessor = NULL;
     }
 
     if(mTargetTrackProcessor)
@@ -167,11 +178,13 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
             DEBUG_TRACK_INFO<<"wait track processor end "<<i++;
             QThread::currentThread()->msleep(50);
         }
-        mTargetTrackProcessor->terminate();
-        mTargetTrackProcessor->wait();
-        qDebug()<<"start delete track processor ...";
-        delete mTargetTrackProcessor;
-        mTargetTrackProcessor = NULL;
+//#ifdef Q_OS_WIN
+//        mTargetTrackProcessor->terminate();
+//        mTargetTrackProcessor->wait();
+//#endif
+//        qDebug()<<"start delete track processor ...";
+//        delete mTargetTrackProcessor;
+//        mTargetTrackProcessor = NULL;
     }
     qDebug()<<"stop parse thread...";
     if(mWorkThread)
@@ -181,11 +194,13 @@ zchxRadarVideoParser::~zchxRadarVideoParser()
             DEBUG_TRACK_INFO<<"quit parse thread...";
             mWorkThread->quit();
         }
-        DEBUG_TRACK_INFO<<"terminate parse thread...";
-        mWorkThread->terminate();
-        mWorkThread->wait();
+//#ifdef Q_OS_WIN
+//        DEBUG_TRACK_INFO<<"terminate parse thread...";
+//        mWorkThread->terminate();
+//        mWorkThread->wait();
+//#endif
         DEBUG_TRACK_INFO<<"delete parse thread...";
-        delete mWorkThread;
+        mWorkThread->deleteLater();
         mWorkThread = NULL;
     }
     qDebug()<<"video parse end now....";
@@ -380,6 +395,7 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
 #endif
         //cout<<"spoke:"<<spoke<<" angle:"<<angle_raw<<heading_raw;
         range_factor = range_meters/lineData.size();
+        if(mTargetTrackProcessor) mTargetTrackProcessor->updateRangeFactor(range_factor);
         //检查是否是经过了一次扫描周期,如果是,发出数据开始解析
         if(mStartAzimuth >= 0 && mStartAzimuth == angle_raw)
         {

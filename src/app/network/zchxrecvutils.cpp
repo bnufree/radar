@@ -180,6 +180,9 @@ void ZCHXReceiverThread::parseRecvData(const QByteArrayList &list)
     case zchxCommon::THREAD_DATA_SVRCFG:
         parseSvrCfg(list.last());
         break;
+    case zchxCommon::THREAD_DATA_DEL_NODE_LOG:
+        parseRadarNodeLog(list.last());
+        break;
     default:
         break;
     }
@@ -276,6 +279,25 @@ void ZCHXReceiverThread::parseRadarTrack(const QByteArray &bytes)
     if(!objRadarSurfaceTrack.ParseFromArray(bytes.data(), bytes.size())) return;
     transferTrack2Point(objRadarSurfaceTrack, radarPointList);
     emit signalSendRadarPoint(radarPointList);
+}
+
+void ZCHXReceiverThread::parseRadarNodeLog(const QByteArray &bytes)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(bytes);
+    if(!doc.isArray()) return;
+    zchxCommon::zchxDelNodeLogList src(doc.array());
+    QList<ZCHX::Data::ITF_RadarNodeLog> list;
+    foreach (zchxCommon::zchxDelNodeLog log, src) {
+        ZCHX::Data::ITF_RadarNodeLog data;
+        data.lat = log.lat;
+        data.lon = log.lon;
+        data.reason = log.reason;
+        data.time = log.time;
+        data.track = log.track;
+        list.append(data);
+    }
+
+    emit signalSendRadarNodeLog(list);
 }
 
 

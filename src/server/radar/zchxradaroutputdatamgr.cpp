@@ -52,6 +52,11 @@ void zchxRadarOutputDataMgr::updateVideoImage(int channel, const zchxRadarVideoS
     delete res;
 }
 
+void zchxRadarOutputDataMgr::updateDelNodeLog(int channel, const QByteArray &log)
+{
+    emit PUBLISH_INS->signalSendPublishData(zchxCommon::THREAD_DATA_DEL_NODE_LOG, log);
+}
+
 void zchxRadarOutputDataMgr::updateChannelReport(int channel, const zchxCommon::zchxRadarChannelReport &report)
 {
     mChannelReport[channel] = report;

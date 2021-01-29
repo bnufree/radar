@@ -35,6 +35,7 @@ enum  THREAD_TYPE{
     THREAD_DATA_RADAR_REPORT,
     THREAD_DATA_AIS,
     THREAD_DATA_SVRCFG,
+    THREAD_DATA_DEL_NODE_LOG,
 };
 
 enum SVRCFG_TYPE{
@@ -46,6 +47,31 @@ enum SVRCFG_TYPE{
     SVR_UPDATE_RADAR_RADIUS,
 };
 
+//添加数据结构
+class COMMONSHARED_EXPORT zchxDelNodeLog : public zchxData
+{
+public:
+    zchxDelNodeLog() : zchxData() {lat = 0.0; lon = 0.0; time = 0; track = 0;}
+    zchxDelNodeLog(const QJsonArray& array) : zchxData(array) {}
+    zchxDelNodeLog(const QJsonObject& obj);
+    QJsonValue toJson() const;
+public:
+    double lat;
+    double lon;
+    qint64 time;
+    QString reason;
+    int track;
+};
+
+
+class COMMONSHARED_EXPORT zchxDelNodeLogList : public zchxDataList<zchxDelNodeLog>
+{
+public:
+    zchxDelNodeLogList() : zchxDataList() {}
+    zchxDelNodeLogList(const zchxDelNodeLog& ll) : zchxDataList<zchxDelNodeLog>(ll) {}
+    zchxDelNodeLogList(const QJsonArray& array) : zchxDataList<zchxDelNodeLog>(array) {}
+public:
+};
 
 
 
@@ -250,6 +276,7 @@ public:
     double          output_target_min_speed;
     int             head;
     bool            use_original_video_img;
+    int             target_move_confirm_dis;
 
 public:
     zchxVideoParse();

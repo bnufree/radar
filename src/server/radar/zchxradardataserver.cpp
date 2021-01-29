@@ -276,9 +276,9 @@ void ZCHXRadarDataServer::initDataSocket(bool ip_change)
     {
         delete mHeartSocket;
         mHeartSocket = 0;
-    }
-    if(mCurrentIPIndex >= mLocalIPList.size() || mCurrentIPIndex < 0) mCurrentIPIndex = 0;
+    }    
     if(ip_change) mCurrentIPIndex++;
+    if(mCurrentIPIndex >= mLocalIPList.size() || mCurrentIPIndex < 0) mCurrentIPIndex = 0;
     QString ip_str = mLocalIPList[mCurrentIPIndex];
     mCurrentIPIndex = mCurrentIPIndex % mLocalIPList.size();
 

@@ -186,6 +186,16 @@ zchxMainWindow::zchxMainWindow(QWidget *parent) :
             }
         });
 
+        connect(mDataChange, &ZCHXRadarDataChange::signalSendRadarNodeLog, [=](const QList<ZCHX::Data::ITF_RadarNodeLog>& list)
+        {
+            foreach (zchxRadarWidget *w, radar_w_list) {
+                if(w->isVisible()){
+                    w->getEcdis()->itfSetRadarNodeLogList(list);
+                }
+            }
+        });
+
+
         connect(mDataChange, SIGNAL(signalUpdatePublishPortStatus(zchxCommon::zchxPublishSettingsList)),
                 this, SLOT(slotUpdatePublishSettingSts(zchxCommon::zchxPublishSettingsList)));
         connect(mDataChange, SIGNAL(signalSendNewDevList(zchxCommon::zchxRadarDeviceList)),
@@ -244,6 +254,17 @@ zchxMainWindow::zchxMainWindow(QWidget *parent) :
             }
         });
         filter_act->setChecked(true);
+
+
+        QAction* log_act = layerCtrlMenu->addAction(QString::fromUtf8("雷达删除日志"));
+        log_act->setCheckable(true);
+        connect(log_act, &QAction::triggered, [=](bool sts){
+            foreach (zchxRadarWidget *w, radar_w_list) {
+                std::shared_ptr<qt::MapLayer> layer = w->getEcdis()->itfGetLayer(ZCHX::LAYER_RADAR_LOG);
+                if(layer) layer->setVisible(sts);
+            }
+        });
+        log_act->setChecked(true);
     });
 
 }

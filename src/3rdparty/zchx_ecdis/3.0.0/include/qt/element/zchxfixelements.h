@@ -276,6 +276,19 @@ private:
 private:
 };
 
+class ZCHX_ECDIS_EXPORT RadarLogElement : public FixElement<ZCHX::Data::ITF_RadarNodeLog>
+{
+public:
+    explicit RadarLogElement(const ZCHX::Data::ITF_RadarNodeLog &data, zchxMapWidget* w)
+        :FixElement<ZCHX::Data::ITF_RadarNodeLog>(data, ZCHX::Data::ELE_RADAR_NODE_LOG, ZCHX::LAYER_RADAR_LOG, w)
+    {}
+
+    void drawElement(QPainter *painter) ;
+private:
+
+private:
+};
+
 class ZCHX_ECDIS_EXPORT WeatherWindWavesElement : public FixElement<ZCHX::Data::ITF_WeatherWindWaves>
 {
 public:

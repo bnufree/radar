@@ -172,6 +172,14 @@ public:
 
 };
 
+class zchxRadarNodeLogDataMgr : public zchxTemplateDataMgr<RadarLogElement, ZCHX::Data::ITF_RadarNodeLog>
+{
+public:
+    explicit zchxRadarNodeLogDataMgr(zchxMapWidget* w, QObject *parent = 0):
+        zchxTemplateDataMgr<RadarLogElement, ZCHX::Data::ITF_RadarNodeLog>(w, ZCHX::DATA_MGR_RADAR_NODE_LOG, ZCHX::LAYER_RADAR_LOG, parent){}
+
+};
+
 
 }
 

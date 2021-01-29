@@ -37,6 +37,7 @@ private:
     void parseRadarReport(const QByteArray& bytes);
     void parseRadarFilterArea(const QByteArray& bytes);
     void parseSvrCfg(const QByteArray& bytes);
+    void parseRadarNodeLog(const QByteArray& bytes);
 signals:
     void signalConnectedStatus(bool sts, const QString& msg, const QString& topic);
     void signalRecvDataNow(int id,  int length);
@@ -44,6 +45,7 @@ signals:
     void signalSendRadarPoint(const QMap<int, QList<ZCHX::Data::ITF_RadarPoint> >&);
     void signalSendLimitDataList(const QList<ZCHX::Data::ITF_IslandLine>&);
     void signalSendRadarVideo(const QList<ZCHX::Data::ITF_RadarVideoImage>&);
+    void signalSendRadarNodeLog(const QList<ZCHX::Data::ITF_RadarNodeLog>&);
     void signalSendRadarReport(const zchxCommon::zchxRadarReportList& report);
     void signalSendSvrCfg(const zchxCommon::zchxRadarServerCfg& cfg);
     void signalSendNewPublishSetting(const zchxCommon::zchxPublishSettingsList& list);

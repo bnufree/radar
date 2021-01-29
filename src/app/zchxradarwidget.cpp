@@ -21,6 +21,7 @@ zchxRadarWidget::zchxRadarWidget(QWidget *parent) :
     //回波
     std::shared_ptr<qt::MapLayer> pRadarVideo(new qt::MapLayer(ZCHX::LAYER_RADARVIDEO,ZCHX::TR_LAYER_RADARVIDEO, true));
     m_pEcdisWin->itfAddLayer(pRadarVideo);
+
     //
     m_pEcdisWin->setCtrlFrameVisible(false);
     m_pEcdisWin->itfSetRadarLabelVisible(true);

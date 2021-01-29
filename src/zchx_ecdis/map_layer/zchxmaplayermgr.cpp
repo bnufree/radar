@@ -1,4 +1,4 @@
-#include "zchxmaplayermgr.h"
+﻿#include "zchxmaplayermgr.h"
 #include "zchxmapwidget.h"
 
 namespace qt {
@@ -120,6 +120,7 @@ void MapLayerMgr::loadEcdisLayers()
 
     // 虚拟航标
     addLayer(ZCHX::LAYER_NAVIMARK, ZCHX::TR_LAYER_NAVIMARK, true);
+    addLayer(ZCHX::LAYER_RADAR_LOG, ZCHX::TR_LAYER_RADAR_LOG, true);
 }
 
 void MapLayerMgr::loadLayers()

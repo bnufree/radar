@@ -1,4 +1,4 @@
-#include "zchxfixelements.h"
+﻿#include "zchxfixelements.h"
 #include "zchxmapframe.h"
 #include "map_layer/zchxmaplayermgr.h"
 #include <QToolTip>
@@ -478,6 +478,22 @@ void HistoryTraceElement::drawElement(QPainter *painter)
     pen.setWidth(0.5);
     painter->setPen(pen);
     painter->drawEllipse(getViewPos(), 3, 3);
+    drawActive(painter);
+    drawFocus(painter);
+}
+
+void RadarLogElement::drawElement(QPainter *painter)
+{
+    if(!isDrawAvailable(painter)) return;
+    PainterPair chk(painter);
+    Element::drawElement(painter);
+
+    painter->setBrush(Qt::red);
+    QPen  pen = QPen(QColor(Qt::GlobalColor::white));
+    pen.setWidth(1);
+    painter->setPen(pen);
+    painter->drawEllipse(getViewPos(), 3, 3);
+    painter->drawText(getViewPos(), m_data.reason + " "+ m_data.getName());
     drawActive(painter);
     drawFocus(painter);
 }

@@ -28,6 +28,7 @@ signals:
     void signalUpdateRadarChannelRadius(int radar, int channel, double radius, double rangefactor);
     void signalUpdatePublishPortStatus(const zchxCommon::zchxPublishSettingsList& list);
     void signalUpdateRadarType(const zchxCommon::zchxRadarTypeData& type);
+    void signalSendRadarNodeLog(const QList<ZCHX::Data::ITF_RadarNodeLog>&);
 
 
 private:
