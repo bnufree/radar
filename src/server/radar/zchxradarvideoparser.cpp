@@ -48,6 +48,8 @@ enum LookupSpokeEnum {
 
 static uint8_t lookupData[6][256];
 
+extern int radar_scan_time_msec;
+
 void zchxRadarVideoParser::InitializeLookupData()
 {
   if (lookupData[5][255] == 0) {
@@ -399,7 +401,8 @@ void zchxRadarVideoParser::slotRecvVideoData(const QByteArray &sRadarData)
         //检查是否是经过了一次扫描周期,如果是,发出数据开始解析
         if(mStartAzimuth >= 0 && mStartAzimuth == angle_raw)
         {
-            qDebug()<<video_id<<"video data term end:"<<" and time elapsed:"<<mCounterT.elapsed()<<" spokes count:"<<mTermSpokeCount;
+            radar_scan_time_msec = mCounterT.elapsed();
+            qDebug()<<video_id<<"video data term end:"<<" and time elapsed:"<<radar_scan_time_msec<<" spokes count:"<<mTermSpokeCount;
             processVideoData(true);
             mRadarVideoMap1T.clear();
             mStartAzimuth = -1;

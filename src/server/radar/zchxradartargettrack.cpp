@@ -11,6 +11,7 @@ extern double polygonArea(const QPolygon& poly);
 extern double polygonArea(const QPolygonF& poly);
 
 extern bool   debug_output;
+int radar_scan_time_msec = 0;
 #define     DEBUG_TRACK_INFO                if(debug_output) qDebug()
 
 QPolygonF  predictionAreaLL2PolygonF(const com::zhichenhaixin::proto::PredictionArea& area)
@@ -407,6 +408,7 @@ bool updateNextNodeSpeedAndCog(zchxRadarRectDef& target, TargetNode* node, doubl
     double distance = source.distanceTo(dest);
     double sog = 0.0;
     if(delta_time > 0) sog = distance / delta_time;
+    if(sog > max_speed) sog = max_speed;
 
 //    //速度校正
 //    double refer_sog = node->getReferenceSog();
@@ -788,12 +790,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             mTargetNodeMap[node->mSerialNum] = new_node;
         }
         determineNodeStatus(mTargetNodeMap[node->mSerialNum].data(), true);
-        //根据距离因子调整速度,如果速度超出了20节
-        if(node->mDefRect->mSrcRect.sogms() > 15.0)
-        {
-            double old = node->mDefRect->mSrcRect.sogms();
-            node->mDefRect->mSrcRect.set_sogms(old / mRangeFactor);
-        }
+
 
         //将目标添加到已经使用的队列中， 防止同一个回波块出现两个目标
         if(target.mSrcRect.realdata() && !used_index_list.contains(target.mSrcRect.rectnumber()))
