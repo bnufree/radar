@@ -349,7 +349,7 @@ void ZCHXRadarVideoProcessor::process(const ZCHXRadarVideoProcessorData& task)
         videoParseData data;
         data.mSrcImg = objPixmap;
         data.mRangeFactor = range_factor;
-        data.mTermIndex = task.first().m_IndexT;
+        data.mTermIndex = task.first().m_VideoTermIndex;
         data.mTermTime = task.first().m_TimeStamp;
 
         zchxRadarRectDefList list;

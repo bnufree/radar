@@ -510,8 +510,9 @@ void zchxRadarVideoParser::processVideoData(bool rotate)
     task.m_RadarVideo = mRadarVideoMap1T;
 //    task.m_Range = mScanRadius;
 //    task.m_Rotate = rotate;
+    //这里将周期设定为uint强制转换到 0-2147483647，这样就不会越界
     mTermIndex = (++mTermIndex) % MAX_RADAR_VIDEO_INDEX_T;
-    task.m_IndexT = mTermIndex;
+    task.m_VideoTermIndex = mTermIndex;
     task.m_TimeStamp = QDateTime::currentDateTime().toTime_t();
     mVideoProcessor->appendSrcData(task);
 }

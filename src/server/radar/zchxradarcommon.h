@@ -254,9 +254,8 @@ struct Afterglow
 struct zchxRadarVideoSourceData
 {
     QMap<int,RADAR_VIDEO_DATA>  m_RadarVideo;
-//    double                      m_Range;
     quint32                     m_TimeStamp;
-    uint                         m_IndexT;
+    int                         m_VideoTermIndex;
 };
 typedef QList<zchxRadarVideoSourceData>   zchxRadarVideoSourceDataList;
 

@@ -582,7 +582,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
 {
     zchxTimeElapsedCounter counter(__FUNCTION__);
     if(task.size() == 0) return;
-    uint cur_cycle_index = task.first().mSrcRect.videocycleindex();
+    int cur_cycle_index = task.first().mSrcRect.videocycleindex();
     zchxRadarRectDefList temp_list(task);             //保存的未经处理的所有矩形单元
     quint32 now_time = task.first().mSrcRect.updatetime();
     qDebug()<<"now process list time:"<<QDateTime::fromTime_t(task.first().mSrcRect.updatetime()).toString("yyyy-MM-dd hh:mm:ss")<<task.size();
@@ -644,8 +644,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
                 DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" lost in this term:"<<cur_cycle_index<<" start prediction now...";
                 node->mLastLostTime = now_time;
             }
-
-            //保存前一次回波块的时间，更新目标回波块的时间为当次时间, 执行预推的时候只预推一个周期的时间
+            //保存前一次回波块的时间，更新目标回波块的时间为当次时间
             int old_time = node->mDefRect->mSrcRect.updatetime();
             node->mDefRect->mSrcRect.set_updatetime(now_time);
             //静止目标就保持不变, 如果是运动目标，则根据时间间隔值执行预推
@@ -655,23 +654,27 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
                 continue;
             }
 
-            int prediction_gap = mSettings.user_video_parse.confirm_target_cnt + mSettings.user_video_parse.video_overlap_cnt;
+            //检查目标是否需要执行预推
             bool exec_prediction = false;
+            int prediction_gap = mSettings.user_video_parse.confirm_target_cnt + mSettings.user_video_parse.video_overlap_cnt;
             if(node->mLastPrecitonTerm == 0)
             {
-                exec_prediction = true;
-            } else
-            {
-                int gap = cur_cycle_index - node->mLastPrecitonTerm;
-                if(gap < 0) gap += MAX_RADAR_VIDEO_INDEX_T;
-                if(gap >= prediction_gap) exec_prediction = true;
+                //初次不预推，标记这种情况下的上一次预推为本次周期的上一周期
+                int last_term_index = cur_cycle_index - 1;
+                if(last_term_index < 0) last_term_index += MAX_RADAR_VIDEO_INDEX_T;
+                node->mLastPrecitonTerm = last_term_index;
             }
+
+            int gap = cur_cycle_index - node->mLastPrecitonTerm;
+            if(gap < 0) gap += MAX_RADAR_VIDEO_INDEX_T;
+            if(gap >= prediction_gap) exec_prediction = true;
             if(!exec_prediction)
             {
-                DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" prediction condition not match."<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index;
+                DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" prediction condition not match."<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index<<" gap:"<<gap<<" prediction gap:"<<prediction_gap;
                 continue;
             }
-            DEBUG_TRACK_INFO<<"start target "<<node->mSerialNum<<" prediction "<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index<<" gap:"<<prediction_gap;
+            DEBUG_TRACK_INFO<<"start target "<<node->mSerialNum<<" prediction "<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index<<" gap:"<<gap<<" prediction gap:"<<prediction_gap;
+
             zchxRadarRectDef copy;
             copy.CopyFrom(*(node->mDefRect));
             copy.mSrcRect.set_realdata(false);
