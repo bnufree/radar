@@ -36,7 +36,7 @@ TargetNode::TargetNode(const zchxRadarRectDef& other, QSharedPointer<TargetNode>
         mParent->mChild = this;
         mLastPrecitonTerm = mParent->mLastPrecitonTerm;
         mLastLostTime = mParent->mLastLostTime;
-        if(debug_output)    qDebug()<<"new child add to parent:"<<mSerialNum<<mParent->mDefRect->mCenter<<" child:"<<mDefRect->mCenter;
+        if(debug_output)    qDebug()<<"new child add to parent:"<<mSerialNum<<mParent->mDefRect->mSrcCenter<<" child:"<<mDefRect->mSrcCenter;
     }
     mVideoTerm = other.mSrcRect.videocycleindex();
 

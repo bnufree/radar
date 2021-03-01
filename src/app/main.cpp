@@ -7,6 +7,8 @@
 #include <QDateTime>
 #include <QDebug>
 #include "zchxmainwindow.h"
+#include "zchxregistorchecker.h"
+#include "zchxlogindlg.h"
 
 
 void logMessageOutputQt5(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -80,10 +82,37 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
     qInstallMessageHandler(logMessageOutputQt5);
-//    QApplication::addLibraryPath("./plugins");
-    qDebug()<<"start load windows...";
+
+#if 1
+    //检查客户端是否已经注册,已经注册的情况，开始根据配置启动主程序
+    QString key = "";
+    bool cancel = false;
+    while (1) {
+        qDebug()<<"start check key:"<<key;
+        zchxRegistorChecker checker;
+        if(checker.startCheck(key))
+        {
+            break;
+        }
+
+        zchxLoginDlg* dlg = new zchxLoginDlg(zchxLoginDlg::Dlg_Reg);
+        dlg->setWindowFlags(Qt::WindowCloseButtonHint | Qt::WindowStaysOnTopHint);
+        int code = dlg->exec();
+        qDebug()<<"code = "<<code;
+        if(code == 0)
+        {
+            cancel = true;
+            break;
+        }
+        key = dlg->getKey();
+        qDebug()<<"new key:"<<key;
+        dlg->close();
+    }
+    if(cancel) return 0;
+#endif
+
     zchxMainWindow w;
-//    w.setFixedSize(900, 800);
     w.show();
+
     return a.exec();
 }

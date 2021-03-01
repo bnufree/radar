@@ -200,12 +200,12 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
     threshold(gray_src, binary, 0, 255, THRESH_BINARY /*| THRESH_TRIANGLE*/);
 
     // 获取最大轮廓
-    vector<vector<Point>> contours;
-    findContours(binary, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    vector<vector<Point>> all_contours;
+    findContours(binary, all_contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     if(mSettings.opencv_img)
     {
         Mat connImage = Mat ::zeros(src.size(),CV_8U);
-        drawContours(connImage, contours, -1, Scalar(255, 0, 255));
+        drawContours(connImage, all_contours, -1, Scalar(255, 0, 255));
 //        saveImg(opencv_dir, "src", src);
 //        saveImg(opencv_dir, "blur", blurImg);
 //        saveImg(opencv_dir, "gray", gray_src);
@@ -220,9 +220,15 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
 //    DEBUG_TRACK_INFO<<"video countours size before filter:"<<contours.size();
     //提取轮廓点
     int index = 1;
-    for(int i=0; i<contours.size(); i++)
+    for(int i=0; i<all_contours.size(); i++)
     {
-        vector<Point> pnts_opencv = contours[i];
+#if 1
+        //提取轮廓对应的凸包
+        vector<Point> pnts_opencv;
+        convexHull(all_contours[i], pnts_opencv);
+#else
+        vector<Point> pnts_opencv = all_contours[i];
+#endif
 
         //获取目标的外形点列
         QPolygonF mercator_polygonF; //目标对应的像素坐标外形点列，墨卡托坐标外形点列
@@ -243,7 +249,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
             continue;
         }
         //计算回波图形的面积,目标的长度和重心位置,检查目标的设定是否设定的阈值范围内
-        double area = contourArea(contours[i]);
+        double area = contourArea(pnts_opencv);
         //检查面积是否符合要求.将面积转换成米
         area = area * data.mRangeFactor * data.mRangeFactor;
         if(area <= mSettings.user_video_parse.area.min || area >= mSettings.user_video_parse.area.max)
@@ -252,7 +258,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
             continue;
         }
         //计算雷达目标的长度和宽度,将矩形块二者的最大者作为目标的长度
-        RotatedRect rect = minAreaRect(contours[i]);
+        RotatedRect rect = minAreaRect(pnts_opencv);
         double width = rect.size.width;
         double height = rect.size.height;
         double target_length = qMax(width, height) * data.mRangeFactor;
@@ -262,7 +268,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
             continue;
         }
         //计算重心
-        Moments M = moments(contours[i]);
+        Moments M = moments(pnts_opencv);
         if(area <= 0.0) continue;
         int cx = int(M.m10/M.m00);
         int cy =  int(M.m01/M.m00);
@@ -337,7 +343,7 @@ bool zchxRadarRectExtraction::extractRectFromVideoSrcImg(zchxRadarRectDefList& l
         wrap.mSrcRect.CopyFrom(rectDef);
         wrap.mShapePnts = pixel_polygon;
         wrap.mArea = area;
-        wrap.mCenter = grave_pnt;
+        wrap.mSrcCenter = grave_pnt;
         wrap.mPosConveter = posConverter;
         list.append(wrap);
 

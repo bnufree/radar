@@ -1,7 +1,9 @@
 ﻿#include "zchxlogindlg.h"
 #include "ui_zchxlogindlg.h"
+#include "zchxregistorchecker.h"
+#include <QDebug>
 
-zchxLoginDlg::zchxLoginDlg(const QString& host, int port, QWidget *parent) :
+zchxLoginDlg::zchxLoginDlg(int mode, const QString& host, int port, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::zchxLoginDlg)
 {
@@ -12,17 +14,49 @@ zchxLoginDlg::zchxLoginDlg(const QString& host, int port, QWidget *parent) :
     ui->host->setText(host);
     ui->port->setValue(port);
     ui->cancel->setVisible(false);
+    setMode(mode);
+}
+
+void zchxLoginDlg::setMode(int mode)
+{
+    mMode = mode;
+    if(mMode == Dlg_Login)
+    {
+        ui->login_frame->setVisible(true);
+        ui->regis_frame->setVisible(false);
+        setWindowTitle(QString::fromUtf8("系统登陆"));
+    } else
+    {
+        ui->login_frame->setVisible(false);
+        ui->regis_frame->setVisible(true);
+        setWindowTitle(QString::fromUtf8("系统注册"));
+        zchxRegistorChecker checker;
+        ui->machine->setText(checker.getMachineCode());
+        ui->machine->setEnabled(false);
+    }
+}
+
+QString zchxLoginDlg::getKey() const
+{
+    return ui->key->text().trimmed();
 }
 
 zchxLoginDlg::~zchxLoginDlg()
 {
+    qDebug()<<"destruct dlg now...";
     delete ui;
 }
 
 void zchxLoginDlg::on_ok_clicked()
 {
-    emit signalNewHostAndPort(ui->host->text().trimmed(), ui->port->value());
-    close();
+    if(mMode == Dlg_Login)
+    {
+        emit signalNewHostAndPort(ui->host->text().trimmed(), ui->port->value());
+    } else
+    {
+        emit signalNewRegisterKey(ui->key->text().trimmed());
+    }
+    accept();
 }
 
 void zchxLoginDlg::on_cancel_clicked()

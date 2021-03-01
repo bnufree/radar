@@ -43,7 +43,7 @@ zchxMainWindow::zchxMainWindow(QWidget *parent) :
     ui->ch1_btn->setChecked(false);
     ui->ch2_btn->setChecked(false);
 
-    this->setWindowTitle(QString::fromUtf8("雷达监控系统客户端"));
+    this->setWindowTitle(QString::fromUtf8("雷达监控系统客户端20210301"));
     this->setWindowIcon(QIcon(":/image/app.png"));
     PROFILES_INSTANCE->setDefault(SEC_SERVER, KEY_HOST, "192.168.30.252");
     PROFILES_INSTANCE->setDefault(SEC_SERVER, KEY_PORT, 6666);
@@ -273,13 +273,16 @@ zchxMainWindow::zchxMainWindow(QWidget *parent) :
 void zchxMainWindow::slotRecheckHostAndPort(const QString &host, int port)
 {
     qDebug()<<"recheck host and port:"<<host<<port;
-    zchxLoginDlg* dlg = new zchxLoginDlg(host, port, this);
+    zchxLoginDlg* dlg = new zchxLoginDlg(zchxLoginDlg::Dlg_Login, host, port, this);
     dlg->setModal(false);
     dlg->setWindowFlags(dlg->windowFlags() | Qt::Tool);
     connect(dlg, &zchxLoginDlg::signalNewHostAndPort, [=](QString new_ip, int new_port)
     {
         PROFILES_INSTANCE->setValue(SEC_SERVER, KEY_HOST, new_ip);
         PROFILES_INSTANCE->setValue(SEC_SERVER, KEY_PORT, new_port);
+        qDebug()<<"start close dlg";
+        dlg->close();
+        qDebug()<<"end close dlg";
         restartMe();
     });
 
@@ -568,10 +571,13 @@ void zchxMainWindow::slotCfgChanged()
 
 void zchxMainWindow::restartMe()
 {
+    qDebug()<<"start new start";
     QString program = QApplication::applicationFilePath();
     QStringList arguments = QApplication::arguments();
     QProcess::startDetached(program, arguments, QApplication::applicationDirPath());
+    qDebug()<<"start new end1";
     QApplication::exit();
+    qDebug()<<"start new end2";
 }
 
 void zchxMainWindow::slotRecvPortStartStatus(const zchxCommon::zchxPortStatusList& list)

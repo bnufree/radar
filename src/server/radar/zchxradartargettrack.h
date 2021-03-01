@@ -49,7 +49,7 @@ public slots:
 
 protected:
     void     run();
-    void     addDelNodeReason(quint32 time, double lat, double lon, const QString& reason, int track);
+    void     addDelNodeReason(quint32 time, TargetNode* node, const QString& reason);
 public:
 
     double      calcDis(const zchxRadarRectDef& p1, const zchxRadarRectDef& p2);

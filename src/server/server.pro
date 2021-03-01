@@ -71,3 +71,5 @@ HEADERS += \
     radar/zchxradarmergethread.h \
     radar/zchxradaroutputdatamgr.h \
     radar/radarccontroldefines.h
+
+FORMS +=

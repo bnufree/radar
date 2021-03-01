@@ -200,6 +200,7 @@ void zchxRequestWorker::slotRequestCfgInfo()
         if(login_errno == 5)
         {
             emit signalRecheckHostPort(mHost, mPort);
+            login_errno = 0;
         } else
         {            
             QThread::sleep(5);

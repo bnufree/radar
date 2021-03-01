@@ -17,6 +17,10 @@ public:
 
     T data() const {return m_data;}
     virtual void setData(const T& data) {
+        elelat = data.getLat();
+        elelon = data.getLon();
+        displayLat = elelat;
+        displayLon = elelon;
         m_data = data;
         setIsUpdate(true);
         setID(m_data.getName());

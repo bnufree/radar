@@ -688,18 +688,20 @@ typedef     QList<zchxRadarRect>                            zchxRadarRectList;
 typedef     com::zhichenhaixin::proto::RadarRectDef         zchxRadarRectDefSrc;
 struct zchxRadarRectDef{
     com::zhichenhaixin::proto::RadarRectDef                 mSrcRect;
-    QPolygon                                               mShapePnts;
+    QPolygon                                                mShapePnts;
     double                                                  mArea = 0;
-    QPoint                                                 mCenter;
+    QPoint                                                  mSrcCenter;
     zchxPosConverter                                        mPosConveter;
+    QPoint                                                  mAdjustCenter;
 
     void CopyFrom(const zchxRadarRectDef& other)
     {
         mSrcRect.CopyFrom(other.mSrcRect);
         mShapePnts = other.mShapePnts;
         mArea   = other.mArea;
-        mCenter = other.mCenter;
+        mSrcCenter = other.mSrcCenter;
         mPosConveter = other.mPosConveter;
+        mAdjustCenter = other.mAdjustCenter;
     }
 };
 

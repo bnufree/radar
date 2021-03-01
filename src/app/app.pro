@@ -61,7 +61,8 @@ HEADERS += \
     zchxradarui.h \
     zchxradarwidget.h \
     zchxvideotermcolorsettingwidget.h \
-    zchxvideocolorsettingwidget.h
+    zchxvideocolorsettingwidget.h \
+    zchxregistorchecker.h
 
 SOURCES += \
     dialog_help.cpp \
@@ -86,4 +87,5 @@ SOURCES += \
     zchxradarui.cpp \
     zchxradarwidget.cpp \
     zchxvideotermcolorsettingwidget.cpp \
-    zchxvideocolorsettingwidget.cpp
+    zchxvideocolorsettingwidget.cpp \
+    zchxregistorchecker.cpp

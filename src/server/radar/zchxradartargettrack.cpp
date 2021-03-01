@@ -148,10 +148,10 @@ void zchxRadarTargetTrack::changeTargetPixCenter(const QPoint &now, zchxRadarRec
 {
     if(!cur) return;
     //检查新旧中心的对比，移动坐标系的外形点列
-    QPoint old = cur->mCenter;
+    QPoint old = cur->mSrcCenter;
     QPoint sub = now - old;
     cur->mShapePnts.translate(sub);
-    cur->mCenter = now;
+    cur->mSrcCenter = now;
 
     //经纬度
     Latlon ll = cur->mPosConveter.pixel2Latlon(now);
@@ -206,11 +206,11 @@ void zchxRadarTargetTrack::changeTargetLL(const Latlon &ll, zchxRadarRectDef &cu
         cur.mSrcRect.mutable_seg()->mutable_end()->set_longitude(cur.mSrcRect.seg().end().longitude() + dlon);
     }
     //检查新旧中心的对比，移动坐标系的外形点列
-    QPoint old = cur.mCenter;
+    QPoint old = cur.mSrcCenter;
     QPoint now = cur.mPosConveter.Latlon2Pixel(ll).toPoint();
     QPoint sub = now - old;
     cur.mShapePnts.translate(sub);
-    cur.mCenter = now;
+    cur.mSrcCenter = now;
 }
 
 bool zchxRadarTargetTrack::isDirectionChange(double src, double target)
@@ -305,45 +305,25 @@ public:
     ~nodeRelativeRectRun() {}
     void run()
     {
-        zchxRadarRectDefList dis_selected_list, overlap_selected_list;
         if(!mNode) return;
 
         //先将关联矩形删除
         mNode->mRelativeRectList.clear();
         //将新周期的回波与上一周期的回波进行对比，识别相同位置或者位置小于一个回波长度的归为一个目标
-        double min_dis = LONG_MAX;
         foreach (zchxRadarRectDef rect , *mRectList)
         {
             //计算两个目标点的位置距离
             double dis = mParent->calcDis(*(mNode->mDefRect), rect);
             //距离是否小于目标对应的回波宽度
             if(dis > mNode->mDefRect->mSrcRect.boundrect().diameter()) continue;
-//            if(dis < min_dis)
-//            {
-//                min_dis = dis;
-//                dis_selected_list.clear();
-//                dis_selected_list.append(rect);
-//            }
             //检查回波图形是否相交
             QPolygon intersected = mNode->mDefRect->mShapePnts.intersected(rect.mShapePnts);
             if(intersected.size() > 0)
             {
-                overlap_selected_list.append(rect);
+                mParent->updateVideoCounter(rect.mSrcRect.rectnumber());
+                mNode->mRelativeRectList.append(rect);
             }
         }
-        //有回波图形和原来的回波图形相交，优先使用
-        mNode->mRelativeRectList.append(overlap_selected_list);
-        if(mNode->mRelativeRectList.size() == 0)
-        {
-            //没有相交的回波图形,使用距离最短的回波图形
-            mNode->mRelativeRectList.append(dis_selected_list);
-        }
-        if(mNode->mRelativeRectList.size() == 1)
-        {
-            mParent->updateVideoCounter(mNode->mRelativeRectList.first().mSrcRect.rectnumber());
-        }
-
-        bool sts = mNode->mRelativeRectList.size() != 0;
     }
 
 private:
@@ -471,7 +451,7 @@ void zchxRadarTargetTrack::determineNodeStatus(TargetNode* node, bool term_chk)
             //打印方位角
             QList<TargetNode*> path = node->path();
             foreach (TargetNode* temp, path) {
-                qDebug()<<node->mSerialNum<<temp->mDefRect->mCenter<<temp->mDefRect->mSrcRect.cog()<<temp->mDefRect->mSrcRect.sogms();
+                qDebug()<<node->mSerialNum<<temp->mDefRect->mSrcCenter<<temp->mDefRect->mSrcRect.cog()<<temp->mDefRect->mSrcRect.sogms();
             }
 
 //            //通过最小二乘法调整目标的位置
@@ -506,8 +486,8 @@ void zchxRadarTargetTrack::determineNodeStatus(TargetNode* node, bool term_chk)
 bool zchxRadarTargetTrack::isSamePoint(TargetNode *src, const zchxRadarRectDef &target)
 {
     if(!src || !src->mDefRect) return false;
-    QPoint point1 = src->mDefRect->mCenter;
-    QPoint point2 = target.mCenter;
+    QPoint point1 = src->mDefRect->mSrcCenter;
+    QPoint point2 = target.mSrcCenter;
     return point1 == point2;
 }
 
@@ -521,14 +501,14 @@ bool zchxRadarTargetTrack::preCheckTargetValid(TargetNode *src, const zchxRadarR
         DEBUG_TRACK_INFO<<src->mSerialNum<<" is top child. so next target is always true...";
         return true;
     }
-    if(src->mDefRect->mCenter == target.mCenter)
+    if(src->mDefRect->mSrcCenter == target.mSrcCenter)
     {
         DEBUG_TRACK_INFO<<src->mSerialNum<<" next child is same as curreent. so is ok..";
         return true;
     }
-    QPoint pre = src->mParent->mDefRect->mCenter;
-    QPoint now = src->mDefRect->mCenter;
-    QPoint next = target.mCenter;
+    QPoint pre = src->mParent->mDefRect->mSrcCenter;
+    QPoint now = src->mDefRect->mSrcCenter;
+    QPoint next = target.mSrcCenter;
 
     double angle1 = atan2(now.y() - pre.y(), now.x() - pre.x()) * 180 / GLOB_PI;
     if(angle1 < 0) angle1 += 360;
@@ -565,17 +545,38 @@ void zchxRadarTargetTrack::updateVideoCounter(int index)
     mVideoUsedCounter[index] = val+1;
 }
 
-void zchxRadarTargetTrack::addDelNodeReason(quint32 time, double lat, double lon, const QString &reason, int track)
+void zchxRadarTargetTrack::addDelNodeReason(quint32 time, TargetNode* node,const QString &reason)
 {
-//    QString key = QString("%1:%2").arg(time).arg(track);
+    if(node->mStatus != Node_Moving) return;
     zchxCommon::zchxDelNodeLog log;
     log.time = time;
-    log.track = track;
-    log.lat = lat;
-    log.lon = lon;
-    log.reason = reason;
+    log.track = node->mSerialNum;
+    log.lat = node->mDefRect->mSrcRect.center().latitude();
+    log.lon = node->mDefRect->mSrcRect.center().longitude();
+    log.reason = /*QString("(%1 %2) %3").arg(log.lat, 0, 'f', 6).arg(log.lon, 0, 'f', 6).arg(reason)*/reason;
 //    qDebug()<<"del node:"<<log.toJson();
-    mDelNodeReasonList.append(log);
+    bool found = false;
+    for(int i=0; i<mDelNodeReasonList.size(); i++)
+    {
+        zchxCommon::zchxDelNodeLog &old = mDelNodeReasonList[i];
+        if(old.track == log.track)
+        {
+            if(old.time != time)
+            {
+                old.lat = log.lat;
+                old.lon = log.lon;
+                old.time = log.time;
+                old.track = log.track;
+                old.reason = log.reason;
+            } else
+            {
+                old.reason.append(QString(",%1").arg(log.reason));
+            }
+            found = true;
+            break;
+        }
+    }
+    if(!found) mDelNodeReasonList.append(log);
 }
 
 void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &task)
@@ -634,8 +635,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
                 //删除对应的目标
                 DEBUG_TRACK_INFO<<"remove target not updated for specified expired time with key:"<<node->mSerialNum;
                 mTargetNodeMap.remove(key);
-                addDelNodeReason(now_time, node->mDefRect->mSrcRect.center().latitude(), node->mDefRect->mSrcRect.center().longitude(),
-                                 QStringLiteral("超时未更新删除"), node->mSerialNum);
+                addDelNodeReason(now_time, node.data(), QStringLiteral("超时未更新删除"));
                 continue;
             }
             //标记目标跟踪丢失的时间
@@ -671,6 +671,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             if(!exec_prediction)
             {
                 DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" prediction condition not match."<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index<<" gap:"<<gap<<" prediction gap:"<<prediction_gap;
+                addDelNodeReason(now_time, node.data(), QStringLiteral("没有找到相交图形，不执行预推"));
                 continue;
             }
             DEBUG_TRACK_INFO<<"start target "<<node->mSerialNum<<" prediction "<<" last prediciotn trem:"<<node->mLastPrecitonTerm<<" now term:"<<cur_cycle_index<<" gap:"<<gap<<" prediction gap:"<<prediction_gap;
@@ -691,21 +692,25 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             changeTargetLL(ll, copy);
             node->mLastPrecitonTerm = cur_cycle_index;
             node->mRelativeRectList.append(copy);
-            DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" prediction to pix"<<copy.mCenter<<" and old is:"<<node->mDefRect->mCenter;
+            DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" prediction to pix"<<copy.mSrcCenter<<" and old is:"<<node->mDefRect->mSrcCenter;
+            addDelNodeReason(now_time, node.data(), QStringLiteral("执行一次预推"));
         } else
         {
             DEBUG_TRACK_INFO<<"find next rect size: "<<node->mRelativeRectList.size()<<node->mSerialNum;
             if(node->mLastLostTime != 0)
             {
                 DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" reappear in this term:"<<cur_cycle_index<<" end prediction now...";
+                addDelNodeReason(now_time, node.data(), QStringLiteral("重新找到相交图形"));
             }
             node->mLastLostTime = 0;
             node->mLastPrecitonTerm = 0;
+
         }
 
         bool multi_target = node->mRelativeRectList.size() > 1;
         if(multi_target)
         {
+#if 0
             //目标的前一周期回波图形上出现叠加了多个这一周期的回波图形，看起来就是目标回波图形分裂成了多个目标图形
             //这时候就将原来的大的回波图形进行删除，让新的回波图形生成新的目标
             DEBUG_TRACK_INFO<<"remove target split into multi targets with key:"<<node->mSerialNum;
@@ -713,6 +718,33 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             addDelNodeReason(now_time, node->mDefRect->mSrcRect.center().latitude(), node->mDefRect->mSrcRect.center().longitude(),
                              QStringLiteral("目标检索到多个可能目标图形"), node->mSerialNum);
             continue;
+#else
+            //如果存在多个待选目标图形，选择和原来目标图形差异最小的图形
+            int sel_index = -1;
+            double sel_area = 0;
+            for(int i=0; i<node->mRelativeRectList.size(); i++)
+            {
+                zchxRadarRectDef check = node->mRelativeRectList.at(i);
+                double sub_area = qAbs(node->mDefRect->mArea - check.mArea);
+                if(sel_index == -1)
+                {
+                    sel_area = sub_area;
+                    sel_index = i;
+                    continue;
+                }
+                if(sub_area < sel_area)
+                {
+                    sel_index = i;
+                    sel_area = sub_area;
+                }
+            }
+            //更新待选图形为最佳图形
+            if(sel_index == -1) sel_index = 0;
+            zchxRadarRectDef target = node->mRelativeRectList.takeAt(sel_index);
+            node->mRelativeRectList.clear();
+            node->mRelativeRectList.append(target);
+            addDelNodeReason(now_time, node.data(), QStringLiteral("多个图形选择面积接近"));
+#endif
         }        
 
         //根据待选点更新目标的下一个状态位置
@@ -744,14 +776,15 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
                     int loop = 0;
                     while (!target.mShapePnts.containsPoint(geo_pix, Qt::OddEvenFill))
                     {
-                        geo_pix.setX( qRound(0.5* (geo_pix.x() + target.mCenter.x())));
-                        geo_pix.setY( qRound(0.5* (geo_pix.y() + target.mCenter.y())));
-                        if(qAbs(geo_pix.x() - target.mCenter.x()) <= 1 && (qAbs(geo_pix.y() - target.mCenter.y()) <= 1)) break;
+                        geo_pix.setX( qRound(0.5* (geo_pix.x() + target.mSrcCenter.x())));
+                        geo_pix.setY( qRound(0.5* (geo_pix.y() + target.mSrcCenter.y())));
+                        if(qAbs(geo_pix.x() - target.mSrcCenter.x()) <= 1 && (qAbs(geo_pix.y() - target.mSrcCenter.y()) <= 1)) break;
                         if(loop >= 1000) break;
                         loop++;
                     }
                     Latlon ll = copy.mPosConveter.pixel2Latlon(geo_pix);
                     changeTargetLL(ll, copy);
+                    addDelNodeReason(now_time, node.data(), QStringLiteral("面积变大，移动到合理位置"));
                 }
                 target.CopyFrom(copy);
             }
@@ -760,9 +793,10 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
         {
             DEBUG_TRACK_INFO<<"target "<<node->mSerialNum<<" area changed smaller than 0.5. large it to old one. and keep it position";
             //将目标的面积还原成原来的大小
-            QPoint sub = target.mCenter - node->mDefRect->mCenter;
+            QPoint sub = target.mSrcCenter - node->mDefRect->mSrcCenter;
             target.mShapePnts = node->mDefRect->mShapePnts.translated(sub);
             target.mArea = node->mDefRect->mArea;
+            addDelNodeReason(now_time, node.data(), QStringLiteral("面积变小，保持面积不变"));
         }
 
         //预检查目标的方向是否与原来的方向相同
@@ -775,6 +809,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
             ll.lat = node->mDefRect->mSrcRect.center().latitude();
             ll.lon = node->mDefRect->mSrcRect.center().longitude();
             changeTargetLL(ll, target);
+            addDelNodeReason(now_time, node.data(), QStringLiteral("目标反向，保持不动"));
         }
 
         //检查新目标和旧目标是否是同一个点
@@ -782,9 +817,10 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
         {
             node->mDefRect->mSrcRect.set_updatetime(now_time);
             DEBUG_TRACK_INFO<<node->mSerialNum<<" same point now. only update rect time..";
+            addDelNodeReason(now_time, node.data(), QStringLiteral("和旧位置相同"));
         } else
         {
-            DEBUG_TRACK_INFO<<node->mSerialNum<<" create a new child:"<<target.mCenter<<" old pos:"<<node->mDefRect->mCenter;
+            DEBUG_TRACK_INFO<<node->mSerialNum<<" create a new child:"<<target.mSrcCenter<<" old pos:"<<node->mDefRect->mSrcCenter;
             updateNextNodeSpeedAndCog(target, node.data(), mMaxSpeed, false);
             //获取选择的目标，更新速度等
             QSharedPointer<TargetNode> new_node(new TargetNode(target, node));
@@ -812,7 +848,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
         TargetNode *node = new TargetNode(rect);
         node->mSerialNum = getCurrentNodeNum();
         mTargetNodeMap.insert(node->mSerialNum, QSharedPointer<TargetNode>(node));
-        DEBUG_TRACK_INFO <<"make new node from origin rect ."<<"node number:"<<node->mSerialNum<<"origin rect number:"<<rect.mSrcRect.rectnumber()<<node->mDefRect->mCenter<<node->mParent<<node->mDefRect->mSrcRect.cog()<<node->mDefRect->mSrcRect.sogms();
+        DEBUG_TRACK_INFO <<"make new node from origin rect ."<<"node number:"<<node->mSerialNum<<"origin rect number:"<<rect.mSrcRect.rectnumber()<<node->mDefRect->mSrcCenter<<node->mParent<<node->mDefRect->mSrcRect.cog()<<node->mDefRect->mSrcRect.sogms();
     }
 
     //现在将目标进行输出
@@ -822,7 +858,7 @@ void zchxRadarTargetTrack::processWithPossibleRoute(const zchxRadarRectDefList &
     //删除2分钟以前的日志
     for(int i=0; i<mDelNodeReasonList.size(); )
     {
-        if(now_time - mDelNodeReasonList[i].time >= 20)
+        if(now_time - mDelNodeReasonList[i].time >= 10)
         {
             mDelNodeReasonList.removeAt(i);
             continue;
