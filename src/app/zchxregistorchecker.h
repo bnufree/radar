@@ -10,6 +10,7 @@ public:
     explicit zchxRegistorChecker(QObject *parent = 0);
     bool     startCheck(const QString& key = QString());
     QString     getMachineCode() const;
+    void        removeKey() {removeRegedit(mRegKey);}
 
 private:
 

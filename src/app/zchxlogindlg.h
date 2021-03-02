@@ -24,6 +24,9 @@ public:
     void setMode(int mode);
     QString getKey() const;
 
+protected:
+    void closeEvent(QCloseEvent* e);
+
 signals:
     void    signalNewHostAndPort(const QString& host, int port);
     void    signalNewRegisterKey(const QString& key);

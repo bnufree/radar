@@ -16,6 +16,7 @@
 #include "zchxradarwidget.h"
 #include <QSpacerItem>
 #include "zchxradarui.h"
+#include "zchxvalidationthread.h"
 
 
 #define         LOG_LINE_COUNT          50
@@ -265,7 +266,13 @@ zchxMainWindow::zchxMainWindow(QWidget *parent) :
             }
         });
         log_act->setChecked(true);
+
+        zchxValidationThread* check_thread = new zchxValidationThread(this);
+        connect(check_thread, SIGNAL(signalAppExpired()), this, SLOT(stopRecv()));
+        check_thread->start();
     });
+
+
 
 }
 
@@ -280,9 +287,9 @@ void zchxMainWindow::slotRecheckHostAndPort(const QString &host, int port)
     {
         PROFILES_INSTANCE->setValue(SEC_SERVER, KEY_HOST, new_ip);
         PROFILES_INSTANCE->setValue(SEC_SERVER, KEY_PORT, new_port);
-        qDebug()<<"start close dlg";
-        dlg->close();
-        qDebug()<<"end close dlg";
+//        qDebug()<<"start close dlg";
+//        dlg->close();
+//        qDebug()<<"end close dlg";
         restartMe();
     });
 
@@ -755,4 +762,20 @@ void zchxMainWindow::checkSpacer()
         QSpacerItem *verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
         ui->verticalLayout_2->addItem(verticalSpacer);
     }
+}
+
+void zchxMainWindow::stopRecv()
+{
+    if(mDataReq)
+    {
+        delete mDataReq;
+        mDataReq = 0;
+    }
+    if(mDataChange)
+    {
+        delete mDataChange;
+        mDataChange = 0;
+    }
+    showMessageBox(QString::fromUtf8("系统使用已经到期\n请重启软件并重新注册"), false);
+    restartMe();
 }

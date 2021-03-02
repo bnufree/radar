@@ -85,28 +85,21 @@ int main(int argc, char *argv[])
 
 #if 1
     //检查客户端是否已经注册,已经注册的情况，开始根据配置启动主程序
-    QString key = "";
     bool cancel = false;
     while (1) {
-        qDebug()<<"start check key:"<<key;
         zchxRegistorChecker checker;
-        if(checker.startCheck(key))
+        if(checker.startCheck())
         {
             break;
         }
-
         zchxLoginDlg* dlg = new zchxLoginDlg(zchxLoginDlg::Dlg_Reg);
         dlg->setWindowFlags(Qt::WindowCloseButtonHint | Qt::WindowStaysOnTopHint);
         int code = dlg->exec();
-        qDebug()<<"code = "<<code;
         if(code == 0)
         {
             cancel = true;
             break;
         }
-        key = dlg->getKey();
-        qDebug()<<"new key:"<<key;
-        dlg->close();
     }
     if(cancel) return 0;
 #endif

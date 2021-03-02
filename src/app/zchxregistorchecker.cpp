@@ -3,7 +3,7 @@
 #include <QProcess>
 #include <QDebug>
 #include <QSettings>
-#include <QDate>
+#include <QDateTime>
 
 
 zchxRegistorChecker::zchxRegistorChecker(QObject *parent) : QObject(parent)
@@ -15,54 +15,109 @@ zchxRegistorChecker::zchxRegistorChecker(QObject *parent) : QObject(parent)
 
 bool zchxRegistorChecker::startCheck(const QString &key)
 {
-    QString wkKey = key;
-    if(wkKey.isEmpty())
+    //如果key为空，就是目标已经注册，现在只需要检查时间
+    //如果Key不为空，就是第一次注册，需要将时间限制写入
+    QString wkKey;
+    QString errMsg;
+    bool sts = false;
+
+    if(key.isEmpty())
     {
         //获取本机已经注册的K值
-        wkKey = getRegedit(mRegKey);
-    }
-    if(wkKey.isEmpty()) return false;
-
-    QString cur_machine = getMachineCode();
-    //检查注册码是否与本机的ID值相匹配
-    //注册码格式=硬件信息+使用时限（四位数）+开始日期(8)
-    //将注册码格式进行解码
-    wkKey = QString::fromUtf8(QByteArray::fromBase64(wkKey.toUtf8()));
-    QString hardware = wkKey.left(wkKey.size() - 12);
-    QString range = wkKey.mid(hardware.size(), 4);
-    QString start_day = wkKey.right(8);
-    qDebug()<<hardware<<range<<start_day;
-    if(hardware != cur_machine) return false;
-    QDate start_date = QDate::fromString(start_day, "yyyyMMdd");
-    if(!start_date.isValid()) return false;
-    if(range.isEmpty()) return false;
-    //检查是不是全是数字
-    QRegExp checker("\\d{4}");
-    if(!checker.exactMatch(range)) return false;
-    while (1) {
-        if(range.size() == 0) break;
-        if(range.left(1) == "0")
+        wkKey =  QString::fromUtf8(QByteArray::fromBase64(getRegedit(mRegKey).toUtf8()));
+    } else
+    {
+        //添加当前时期
+        wkKey =  QString::fromUtf8(QByteArray::fromBase64(key.toUtf8()));
+//        qDebug()<<"orignal key:"<<wkKey;
+        //检查序列号的生成时间
+        QDateTime check_time = QDateTime::fromString(wkKey.right(14), "yyyyMMddhhmmss");
+        if(!check_time.isValid())
         {
-            range.remove(0, 1);
+            errMsg = QString::fromUtf8("注册码错误1");
+            goto FUNC_END;
+        }
+        if(check_time.secsTo(QDateTime::currentDateTime()) > 3600)
+        {
+            errMsg = QString::fromUtf8("注册码错误2");
+            goto FUNC_END;
+        }
+        wkKey.remove(wkKey.size()-14, 14);
+        wkKey.append(QString("").sprintf("%010d", QDateTime::currentDateTime().toTime_t()));
+    }
+    if(wkKey.isEmpty())
+    {
+        errMsg = QString::fromUtf8("系统未注册");
+        goto FUNC_END;
+    } else
+    {
+//        qDebug()<<"register info:"<<wkKey;
+        QString cur_machine = getMachineCode();
+        //检查注册码是否与本机的ID值相匹配
+        //注册码格式=硬件信息+使用时限（10位数）+开始日期(时间戳10位)
+        //将注册码格式进行解码
+        QString hardware = wkKey.left(wkKey.size() - 20);
+        QString range = wkKey.mid(hardware.size(), 10);
+        QString start_day = wkKey.right(10);
+        //    qDebug()<<hardware<<range<<start_day;
+        if(hardware != cur_machine)
+        {
+            errMsg = QString::fromUtf8("注册码错误3");
+            goto FUNC_END;
+        }
+        QDateTime start_time = QDateTime::fromTime_t(start_day.toUInt());
+        if(!start_time.isValid())
+        {
+            errMsg = QString::fromUtf8("注册码错误4");
+            goto FUNC_END;
+        }
+        if(range.isEmpty())
+        {
+            errMsg = QString::fromUtf8("注册码错误5");
+            goto FUNC_END;
+        }
+        //检查是不是全是数字
+        QRegExp checker("\\d{10}");
+        if(!checker.exactMatch(range))
+        {
+            errMsg = QString::fromUtf8("注册码错误6");
+            goto FUNC_END;
+        }
+        while (1) {
+            if(range.size() == 0) break;
+            if(range.left(1) == "0")
+            {
+                range.remove(0, 1);
+            } else
+            {
+                break;
+            }
+        }
+
+        if(range.isEmpty())
+        {
+            sts = true;
+        } else if(start_time.addSecs(range.toUInt()) >= QDateTime::currentDateTime())
+        {
+            sts = true;
         } else
         {
-            break;
+            errMsg = QString::fromUtf8("注册码错误7");
+            goto FUNC_END;
+        }
+
+        if(sts && !key.isEmpty())
+        {
+            removeRegedit(mRegKey);
+            writeRegedit(mRegKey, wkKey.toUtf8().toBase64());
         }
     }
-    bool sts = false;
-    if(range.isEmpty())
-    {
-        sts = true;
-    } else if(start_date.addDays(range.toInt()) >= QDate::currentDate())
-    {
-        sts = true;
-    }
 
-    if(sts && !key.isEmpty())
+FUNC_END:
+    if(errMsg.size() > 0)
     {
-        writeRegedit(mRegKey, key);
+        qDebug()<<"error msg:"<<errMsg;
     }
-
     return sts;
 }
 

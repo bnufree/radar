@@ -94,6 +94,7 @@ private slots:
     void slotSetMapSource();
     int showMessageBox(const QString& content, bool cancel);
     void checkSpacer();
+    void stopRecv();
 private slots:
     void updateAllRadarSettings(const zchxCommon::zchxRadarDeviceList& list);
 

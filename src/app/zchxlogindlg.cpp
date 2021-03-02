@@ -32,8 +32,14 @@ void zchxLoginDlg::setMode(int mode)
         setWindowTitle(QString::fromUtf8("系统注册"));
         zchxRegistorChecker checker;
         ui->machine->setText(checker.getMachineCode());
-        ui->machine->setEnabled(false);
+        ui->machine->setEnabled(true);
     }
+}
+
+void zchxLoginDlg::closeEvent(QCloseEvent *e)
+{
+    qDebug()<<"close event happened now...";
+    QDialog::closeEvent(e);
 }
 
 QString zchxLoginDlg::getKey() const
@@ -54,7 +60,8 @@ void zchxLoginDlg::on_ok_clicked()
         emit signalNewHostAndPort(ui->host->text().trimmed(), ui->port->value());
     } else
     {
-        emit signalNewRegisterKey(ui->key->text().trimmed());
+        zchxRegistorChecker checker;
+        checker.startCheck(ui->key->text().trimmed());
     }
     accept();
 }
